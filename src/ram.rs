@@ -13,6 +13,6 @@ impl Ram {
     }
     pub fn write(&self) {
     }
-    pub fn read(&self) {
+    pub fn read(&self, addr: u16) {
     }
 }

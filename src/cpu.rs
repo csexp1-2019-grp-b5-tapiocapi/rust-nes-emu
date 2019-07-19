@@ -1,10 +1,12 @@
+use crate::cpu_bus;
 pub struct Cpu {
     pub a: i8, // accumlator register
     pub x: i8, // index register
     pub y: i8, // index register
-    pub sp: u16, // stack pointer       (Begin from 0x1FD)
-    pub pc: u16,// program counter
-    pub p: Status
+    pub sp: u16, // stack pointer       (Begin from 0x1FD) Upper Bit is fixed to 0x01
+    pub pc: u16, // program counter
+    pub p: Status,
+    bus: cpu_bus::CpuBus
 }
 
 pub struct Status {
@@ -37,7 +39,7 @@ static CYCLE: &[u8] = &[
      /*0xF0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
 ];
 
-pub fn init() -> Cpu {
+pub fn init(cpu_bus: cpu_bus::CpuBus) -> Cpu {
         let mut cpu = Cpu{
             a: 0x00,
             x: 0x00,
@@ -53,7 +55,8 @@ pub fn init() -> Cpu {
                 interrupt: true,
                 zero: false,
                 carry: false
-            }
+            },
+            bus: cpu_bus
         };
         return cpu;
 }
@@ -62,7 +65,10 @@ impl Cpu {
     fn reset(&self) {
     }
 
-    fn fetch(&self) {
+    fn fetch(mut self) -> i8{
+        let opecode = self.bus.read_by_cpu(self.pc);
+        self.pc += 1;
+        return opecode;
     }
 
     fn fetch_operand(&self) {

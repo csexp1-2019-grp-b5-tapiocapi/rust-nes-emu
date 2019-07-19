@@ -4,6 +4,7 @@ use std::fs::File;
 use crate::cpu;
 use crate::cpu_bus;
 use crate::ram;
+use crate::rom;
 
 pub struct Nes {
     pub game_rom: Vec<u8>,
@@ -33,10 +34,13 @@ pub fn load(file_path: &str) -> Nes {
 }
 
 impl Nes {
-    pub fn start(&self) {
-        let mut cpu = cpu::init();
-        //cpu.run();
+    pub fn start(self) {
+        let rom = rom::init(self.game_rom, self.prog_range);
         let mut ram = ram::init(2048);
+
+        //cpu.run();
+        let bus = cpu_bus::init(ram, rom);
+        let mut cpu = cpu::init(bus);
     }
 }
 
