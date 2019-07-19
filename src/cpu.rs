@@ -1,12 +1,12 @@
 use crate::cpu_bus;
 pub struct Cpu {
-    pub a: i8, // accumlator register
-    pub x: i8, // index register
-    pub y: i8, // index register
+    pub a: i8,   // accumlator register
+    pub x: i8,   // index register
+    pub y: i8,   // index register
     pub sp: u16, // stack pointer       (Begin from 0x1FD) Upper Bit is fixed to 0x01
     pub pc: u16, // program counter
     pub p: Status,
-    bus: cpu_bus::CpuBus
+    bus: cpu_bus::CpuBus,
 }
 
 pub struct Status {
@@ -17,10 +17,11 @@ pub struct Status {
     pub decimal: bool,
     pub interrupt: bool,
     pub zero: bool,
-    pub carry: bool
+    pub carry: bool,
 }
 
-static CYCLE: &[u8] = &[
+#[rustfmt::skip]
+const CYCLE: [u8; 256] = [
      /*0x00*/ 7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
      /*0x10*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 6, 7,
      /*0x20*/ 6, 6, 2, 8, 3, 3, 5, 5, 4, 2, 2, 2, 4, 4, 6, 6,
@@ -39,14 +40,20 @@ static CYCLE: &[u8] = &[
      /*0xF0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
 ];
 
-pub fn init(cpu_bus: cpu_bus::CpuBus) -> Cpu {
-        let mut cpu = Cpu{
+enum ReadSize {
+    Word,
+    Byte,
+}
+
+impl Cpu {
+    pub fn init(cpu_bus: cpu_bus::CpuBus) -> Cpu {
+        Cpu {
             a: 0x00,
             x: 0x00,
             y: 0x00,
             sp: 0x01FD,
             pc: 0x0000,
-            p: Status{
+            p: Status {
                 negative: false,
                 overflow: false,
                 reserved: true,
@@ -54,29 +61,37 @@ pub fn init(cpu_bus: cpu_bus::CpuBus) -> Cpu {
                 decimal: false,
                 interrupt: true,
                 zero: false,
-                carry: false
+                carry: false,
             },
-            bus: cpu_bus
-        };
-        return cpu;
-}
-
-impl Cpu {
-    fn reset(&self) {
+            bus: cpu_bus,
+        }
     }
 
-    fn fetch(mut self) -> i8{
-        let opecode = self.bus.read_by_cpu(self.pc);
-        self.pc += 1;
-        return opecode;
+    fn reset(&self) {}
+
+    fn read(&mut self, addr: u16, size: ReadSize) -> i8 {
+        let bus = &self.bus;
+        match size {
+            ReadSize::Word => {
+                let upper = bus.read_by_cpu(addr);
+                let lower = bus.read_by_cpu(addr);
+            }
+            ReadSize::Byte => {
+                let bit = bus.read_by_cpu(addr);
+            }
+        }
+        0
     }
 
-    fn fetch_operand(&self) {
+    fn fetch(&mut self, size: ReadSize) -> i8 {
+        let pc = self.pc;
+        let opecode = self.read(pc, size);
+        opecode
     }
 
-    fn exec(&self) {
-    }
+    fn fetch_operand(&self) {}
 
-    pub fn run(&self) {
-    }
+    fn exec(&self) {}
+
+    pub fn run(&self) {}
 }
