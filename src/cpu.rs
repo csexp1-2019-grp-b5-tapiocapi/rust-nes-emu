@@ -45,6 +45,11 @@ enum ReadSize {
     Byte,
 }
 
+enum ReadResult {
+    Data(u8),
+    Addr(u16),
+}
+
 impl Cpu {
     pub fn init(cpu_bus: cpu_bus::CpuBus) -> Cpu {
         Cpu {
@@ -67,31 +72,59 @@ impl Cpu {
         }
     }
 
-    fn reset(&self) {}
+    fn reset(&mut self) {
+        self.a = 0x00;
+        self.x = 0x00;
+        self.y = 0x00;
+        self.sp = 0x01FD;
+        self.pc = 0x0000;
+        self.p = Status {
+            negative: false,
+            overflow: false,
+            reserved: true,
+            break_mode: true,
+            decimal: false,
+            interrupt: true,
+            zero: false,
+            carry: false,
+        };
+        self.pc = if let ReadResult::Addr(i) = self.read(0xFFFC, ReadSize::Word) {
+            i
+        } else {
+            unsafe { std::hint::unreachable_unchecked() }
+        };
+    }
 
-    fn read(&mut self, addr: u16, size: ReadSize) -> i8 {
+    fn read(&mut self, addr: u16, size: ReadSize) -> ReadResult {
         let bus = &self.bus;
         match size {
             ReadSize::Word => {
-                let upper = bus.read_by_cpu(addr);
                 let lower = bus.read_by_cpu(addr);
+                let upper = bus.read_by_cpu(addr + 0x0001);
+                let mut bit = (upper as u16) << 8;
+                bit |= lower as u16;
+                println!("{} {} ", lower, upper);
+                ReadResult::Addr(bit)
             }
-            ReadSize::Byte => {
-                let bit = bus.read_by_cpu(addr);
-            }
+            ReadSize::Byte => ReadResult::Data(bus.read_by_cpu(addr)),
         }
-        0
     }
 
-    fn fetch(&mut self, size: ReadSize) -> i8 {
-        let pc = self.pc;
-        let opecode = self.read(pc, size);
-        opecode
+    // fetch opcode (8-bit)
+    fn fetch(&mut self) -> u8 {
+        if let ReadResult::Data(i) = self.read(self.pc, ReadSize::Byte) {
+            i
+        } else {
+            unsafe { std::hint::unreachable_unchecked() }
+        }
     }
 
     fn fetch_operand(&self) {}
 
     fn exec(&self) {}
 
-    pub fn run(&self) {}
+    pub fn run(&mut self) {
+        self.reset();
+        println!("{:x}", self.pc);
+    }
 }

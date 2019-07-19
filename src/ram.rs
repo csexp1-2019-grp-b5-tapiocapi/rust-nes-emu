@@ -9,5 +9,7 @@ impl Ram {
 
     pub fn reset(&self) {}
     pub fn write(&self) {}
-    pub fn read(&self, addr: u16) {}
+    pub fn read(&self, addr: u16) -> u8 {
+        0
+    }
 }

@@ -7,6 +7,7 @@ impl Rom {
         let from = range.0 as usize;
         let to = range.1 as usize;
 
+        //println!("{:?}", entire_rom[from..=to].to_vec());
         Rom {
             rom: entire_rom[from..=to].to_vec(),
         }
