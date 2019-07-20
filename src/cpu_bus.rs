@@ -5,6 +5,7 @@ pub struct CpuBus {
     ram: ram::Ram,
     rom: rom::Rom,
 }
+
 impl CpuBus {
     pub fn init(nes_ram: ram::Ram, nes_rom: rom::Rom) -> CpuBus {
         CpuBus {

@@ -3,6 +3,8 @@ use crate::cpu_bus::CpuBus;
 use crate::ram::Ram;
 use crate::rom::Rom;
 
+use std::path::Path;
+
 pub struct Nes {
     game_rom: Vec<u8>,
     prog_range: (u16, u16), //GAME ROM
@@ -10,8 +12,8 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn load(file_path: &str) -> Nes {
-        let buffer = std::fs::read(file_path).unwrap();
+    pub fn load<P: AsRef<Path>>(file_path: P) -> Nes {
+        let buffer = std::fs::read(file_path.as_ref()).unwrap();
         let header_size = 0x0010;
 
         let program_rom_size = buffer[4] as u16;

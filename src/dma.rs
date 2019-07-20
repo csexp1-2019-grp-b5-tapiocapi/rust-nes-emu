@@ -1,9 +1,6 @@
-struct Dma {
-}
+struct Dma {}
 
 impl Dma {
-    fn write() {
-    }
-    fn read() {
-    }
+    fn write() {}
+    fn read() {}
 }
