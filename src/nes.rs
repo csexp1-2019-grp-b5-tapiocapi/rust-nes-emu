@@ -3,6 +3,7 @@ use crate::cpu_bus::CpuBus;
 use crate::ram::Ram;
 use crate::rom::Rom;
 
+use std::io;
 use std::path::Path;
 
 pub struct Nes {
@@ -12,8 +13,8 @@ pub struct Nes {
 }
 
 impl Nes {
-    pub fn load<P: AsRef<Path>>(file_path: P) -> Nes {
-        let buffer = std::fs::read(file_path.as_ref()).unwrap();
+    pub fn load<P: AsRef<Path>>(file_path: P) -> io::Result<Nes> {
+        let buffer = std::fs::read(file_path.as_ref())?;
         let header_size = 0x0010;
 
         let program_rom_size = buffer[4] as u16;
@@ -27,7 +28,7 @@ impl Nes {
             chr_range: (character_rom_start, character_rom_end - 1),
         };
 
-        return game;
+        Ok(game)
     }
 
     pub fn start(&self) {
