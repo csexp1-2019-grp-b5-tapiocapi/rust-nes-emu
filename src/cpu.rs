@@ -40,6 +40,80 @@ const CYCLE: [u8; 256] = [
      /*0xF0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
 ];
 
+enum Instruction {
+    // A: Accumlator M: fetched memory data C: The flag to set by an instruction.
+    ADC, // Add M to A with C: A += M + C
+    SBC, // Substract M from A with C: A -= M - not C
+    AND, // "AND" M with A: A &= M
+    ORA, // "OR" M with A: A |= M
+    EOR, // "XOR" M with A: A ^= M
+    ASL, // Arithmetic shift left one bit: C = bit 7 of A
+    LSR, // Logical shift right one bit: C = bit 0 of A
+    ROL, // Rotate left one bit: C = bit 7 of A
+    ROR, // Rotate right one bit: C = bit 0 of A
+    BCC, // Branch on C clear
+    BCS, // Branch on C set
+    BEQ, // Branch on Z set (result equal) 
+    BNE, // Branch on Z clear (result not equal)
+    BVC, // Branch on V clear
+    BVS, // Branch on V set
+    BPL, // Branch on N clear (result plus)
+    BMI, // Branch on N set ( result minus)
+    BIT, // Test Bits in M with A: N = bit 7 of M, V = bit 6 of M
+    JMP, // Jump to new location: PC = ADDR 
+    JSR, // Jump to new location saving return address: PC = ADDR
+    RTS, // Return from Subroutine
+    BRK, // Force Break
+    RTI, // Return from Interrupt)
+    CMP, // Compare M and A
+    CPX, // Compare M and X
+    CPY, // Compare M and Y
+    INC, // Increment M by one
+    DEC, // Decrement M by one
+    INX, // Increment X by one
+    DEX, // Decrement X by one
+    INY, // Increment Y by one
+    DEY, // Decrement Y by one
+    CLC, // Clear C flag)
+    SEC, // Set C flag)
+    CLI, // Clear Interrupt disable
+    SEI, // Set Interrupt disable
+    CLD, // Clear Decimal mode
+    SED, // Set Decimal mode
+    CLV, // Clear V flag
+    LDA, // Load A from M
+    LDX, // Load X from M
+    LDY, // Load Y from M
+    STA, // Store A to M
+    STX, // Store X to M
+    STY, // Store Y to M
+    TAX, // Transfer A to X
+    TXA, // Transfer X to A
+    TAY, // Transfer A to Y
+    TYA, // Transfer Y to A
+    TSX, // Transfer S to X
+    TXS, // Transfer X to S
+    PHA, // Push A on stack
+    PLA, // Pull A from stack
+    PHP, // Push P on stack
+    PLP, // Pull P from stack
+    NOP, // No operation
+}
+
+enum Addressing {
+    Accumlator,
+    Immediate,
+    Absolute,
+    ZeroPage,
+    IndexedZeroPage,
+    IndexedAbsolute,
+    Implied,
+    Relative,
+    IndexedIndirect,
+    IndirectIndexed,
+    AbsoluteIndirect
+}
+
 enum ReadSize {
     Word,
     Byte,
@@ -72,7 +146,7 @@ impl Cpu {
         }
     }
 
-    fn reset(&mut self) {
+    pub fn reset(&mut self) {
         self.a = 0x00;
         self.x = 0x00;
         self.y = 0x00;
@@ -103,7 +177,7 @@ impl Cpu {
                 let upper = bus.read_by_cpu(addr + 0x0001);
                 let mut bit = (upper as u16) << 8;
                 bit |= lower as u16;
-                println!("{} {} ", lower, upper);
+                //println!("{} {} ", lower, upper);
                 ReadResult::Addr(bit)
             }
             ReadSize::Byte => ReadResult::Data(bus.read_by_cpu(addr)),
@@ -113,6 +187,8 @@ impl Cpu {
     // fetch opcode (8-bit)
     fn fetch(&mut self) -> u8 {
         if let ReadResult::Data(i) = self.read(self.pc, ReadSize::Byte) {
+            self.pc += if self.pc < 0xFFFF { 1 } else {0};
+            println!("{:x}", self.pc);
             i
         } else {
             unsafe { std::hint::unreachable_unchecked() }
@@ -124,7 +200,7 @@ impl Cpu {
     fn exec(&self) {}
 
     pub fn run(&mut self) {
-        self.reset();
-        println!("{:x}", self.pc);
+        let opcode = self.fetch();
+        println!("{:x}", opcode);
     }
 }

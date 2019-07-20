@@ -36,6 +36,9 @@ impl Nes {
         let bus = CpuBus::init(ram, rom);
         let mut cpu = Cpu::init(bus);
         //println!("{:?}", self.game_rom);
-        cpu.run();
+        cpu.reset();
+        loop {
+            cpu.run();
+        }
     }
 }
