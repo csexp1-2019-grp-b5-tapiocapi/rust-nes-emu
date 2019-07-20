@@ -53,14 +53,14 @@ enum Instruction {
     ROR, // Rotate right one bit: C = bit 0 of A
     BCC, // Branch on C clear
     BCS, // Branch on C set
-    BEQ, // Branch on Z set (result equal) 
+    BEQ, // Branch on Z set (result equal)
     BNE, // Branch on Z clear (result not equal)
     BVC, // Branch on V clear
     BVS, // Branch on V set
     BPL, // Branch on N clear (result plus)
     BMI, // Branch on N set ( result minus)
     BIT, // Test Bits in M with A: N = bit 7 of M, V = bit 6 of M
-    JMP, // Jump to new location: PC = ADDR 
+    JMP, // Jump to new location: PC = ADDR
     JSR, // Jump to new location saving return address: PC = ADDR
     RTS, // Return from Subroutine
     BRK, // Force Break
@@ -100,7 +100,7 @@ enum Instruction {
     NOP, // No operation
     NOPI,
     NOPD,
-    Unknown
+    Unknown,
 }
 
 enum Addressing {
@@ -128,6 +128,7 @@ enum ReadSize {
 enum ReadResult {
     Data(u8),
     Addr(u16),
+    None
 }
 
 impl Cpu {
@@ -193,7 +194,7 @@ impl Cpu {
     // fetch opcode (8-bit)
     fn fetch(&mut self) -> u8 {
         if let ReadResult::Data(i) = self.read(self.pc, ReadSize::Byte) {
-            self.pc += if self.pc < 0xFFFF {1} else {0};
+            self.pc += if self.pc < 0xFFFF { 1 } else { 0 };
             //println!("{:x}", self.pc);
             i
         } else {
@@ -201,7 +202,67 @@ impl Cpu {
         }
     }
 
-    fn fetch_operand(&self) {}
+    fn fetch_opeland(&mut self, op_info: (Instruction, Addressing, u8)) -> ReadResult {
+        match op_info.1 {
+            Addressing::Accumlator => {ReadResult::None},
+            Addressing::Immediate => {ReadResult::Data(self.fetch())},
+            Addressing::Absolute => {
+                let lower_bit = self.fetch();
+                let upper_bit = self.fetch();
+                let mut bit = (upper_bit as u16) << 8;
+                bit |= lower_bit as u16;
+                ReadResult::Addr(bit)
+            },
+            Addressing::ZeroPage => {ReadResult::Addr(self.fetch() as u16)},
+            Addressing::ZeroPageX => {
+                ReadResult::Addr((self.fetch() as u16 + self.x as u16) & 0xFF)
+            },
+            Addressing::ZeroPageY => {
+                ReadResult::Addr(self.fetch() as u16 + self.y as u16 & 0xFF)
+            },
+            Addressing::AbsoluteX => {
+                let lower_bit = self.fetch();
+                let upper_bit = self.fetch();
+                let mut bit = (upper_bit as u16) << 8;
+                bit |= lower_bit as u16;
+                ReadResult::Addr(bit + self.x as u16)
+            },
+            Addressing::AbsoluteY => {
+                let lower_bit = self.fetch();
+                let upper_bit = self.fetch();
+                let mut bit = (upper_bit as u16) << 8;
+                bit |= lower_bit as u16;
+                ReadResult::Addr(bit + self.y as u16)
+            },
+            Addressing::Implied => {ReadResult::None},
+            Addressing::Relative => {
+                let addr = self.pc;
+                let offset = self.fetch() as u16;
+                ReadResult::Addr(addr + offset)
+            },
+            Addressing::Indirect => {
+                let lower = self.fetch() as u16;
+                let upper = self.fetch() as u16;
+                ReadResult::Addr(upper + lower)
+            },
+            Addressing::IndirectX => {
+                let mut bit = self.fetch() as u16;
+                bit += self.x as u16;
+                bit &= 0x00FF;
+                ReadResult::Addr(bit)
+            },
+            Addressing::IndirectY => {
+                let mut bit = self.fetch() as u16;
+                bit += self.y as u16;
+                bit &= 0x00FF;
+                ReadResult::Addr(bit)
+            },
+            Addressing::Unknown => {
+                println!("Unknown Addressing mode");
+                ReadResult::None
+            }
+        }
+    }
 
     fn exec(&self) {}
 
@@ -209,7 +270,12 @@ impl Cpu {
         let opcode = self.fetch();
         if self.pc < 0x8080 {
             let op_info = self.get_instruction_info(opcode);
-            println!("{:x} {:x} {}", opcode, op_info.2, if op_info.2 == 0 {"unknown"} else {""});
+            println!(
+                "{:x} {:x} {}",
+                opcode,
+                op_info.2,
+                if op_info.2 == 0 { "unknown" } else { "" }
+            );
         }
     }
 
