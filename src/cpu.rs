@@ -125,12 +125,6 @@ enum ReadSize {
     Byte,
 }
 
-enum ReadResult {
-    Data(u8),
-    Addr(u16),
-    None,
-}
-
 impl Cpu {
     pub fn init(cpu_bus: cpu_bus::CpuBus) -> Cpu {
         Cpu {
@@ -169,14 +163,10 @@ impl Cpu {
             zero: false,
             carry: false,
         };
-        self.pc = if let ReadResult::Addr(i) = self.read(0xFFFC, ReadSize::Word) {
-            i
-        } else {
-            unsafe { std::hint::unreachable_unchecked() }
-        };
+        self.pc = self.read(0xFFFC, ReadSize::Word);
     }
 
-    fn read(&mut self, addr: u16, size: ReadSize) -> ReadResult {
+    fn read(&mut self, addr: u16, size: ReadSize) -> u16 {
         let bus = &self.bus;
         match size {
             ReadSize::Word => {
@@ -184,83 +174,99 @@ impl Cpu {
                 let upper = bus.read_by_cpu(addr + 0x0001);
                 let mut bit = (upper as u16) << 8;
                 bit |= lower as u16;
+                bit
                 //println!("{} {} ", lower, upper);
-                ReadResult::Addr(bit)
             }
-            ReadSize::Byte => ReadResult::Data(bus.read_by_cpu(addr)),
+            ReadSize::Byte => bus.read_by_cpu(addr) as u16,
         }
     }
 
     // fetch opcode (8-bit)
-    fn fetch(&mut self) -> u8 {
-        if let ReadResult::Data(i) = self.read(self.pc, ReadSize::Byte) {
-            self.pc += if self.pc < 0xFFFF { 1 } else { 0 };
-            //println!("{:x}", self.pc);
-            i
-        } else {
-            unsafe { std::hint::unreachable_unchecked() }
-        }
+    fn fetch(&mut self) -> u16 {
+        let data = self.read(self.pc, ReadSize::Byte);
+        self.pc += if self.pc < 0xFFFF { 1 } else { 0 };
+        //println!("{:x}", self.pc);
+        data
     }
 
-    fn fetch_opeland(&mut self, op_info: (Instruction, Addressing, u8)) -> ReadResult {
-        match op_info.1 {
-            Addressing::Accumlator => ReadResult::None,
-            Addressing::Immediate => ReadResult::Data(self.fetch()),
+    fn fetch_opeland(&mut self, addressing: Addressing) -> u16 {
+        match addressing {
+            Addressing::Accumlator => {0},
+            Addressing::Immediate => {self.fetch()},
             Addressing::Absolute => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
-                ReadResult::Addr(bit)
-            }
-            Addressing::ZeroPage => ReadResult::Addr(self.fetch() as u16),
-            Addressing::ZeroPageX => ReadResult::Addr((self.fetch() as u16 + self.x as u16) & 0xFF),
-            Addressing::ZeroPageY => ReadResult::Addr(self.fetch() as u16 + self.y as u16 & 0xFF),
+                bit
+            },
+            Addressing::ZeroPage => {self.fetch() as u16},
+            Addressing::ZeroPageX => {
+                (self.fetch() as u16 + self.x as u16) & 0xFF
+            },
+            Addressing::ZeroPageY => { //?
+                (self.fetch() as u16 + self.y as u16 & 0xFF)
+            },
             Addressing::AbsoluteX => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
-                ReadResult::Addr(bit + self.x as u16)
-            }
+                bit + self.x as u16
+            },
             Addressing::AbsoluteY => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
-                ReadResult::Addr(bit + self.y as u16)
-            }
-            Addressing::Implied => ReadResult::None,
+                (bit + self.y as u16)
+            },
+            Addressing::Implied => {0},
             Addressing::Relative => {
                 let addr = self.pc;
                 let offset = self.fetch() as u16;
-                ReadResult::Addr(addr + offset)
-            }
+                addr + offset
+            },
             Addressing::Indirect => {
-                let lower = self.fetch() as u16;
-                let upper = self.fetch() as u16;
-                ReadResult::Addr(upper + lower)
-            }
+                let lower_byte= self.fetch();
+                let upper_byte= self.fetch();
+                let mut byte = (upper_byte as u16) << 8;
+                byte |= lower_byte as u16;
+                self.read(byte, ReadSize::Word)
+            },
             Addressing::IndirectX => {
-                let mut bit = self.fetch() as u16;
-                bit += self.x as u16;
-                bit &= 0x00FF;
-                ReadResult::Addr(bit)
-            }
+                let mut lower = self.fetch() as u16;
+                lower += self.x as u16;
+                lower &= 0x00FF;
+                self.read(lower, ReadSize::Word)
+            },
             Addressing::IndirectY => {
-                let mut bit = self.fetch() as u16;
-                bit += self.y as u16;
-                bit &= 0x00FF;
-                ReadResult::Addr(bit)
-            }
+                let mut lower = self.fetch() as u16;
+                lower += self.y as u16;
+                lower &= 0x00FF;
+                self.read(lower, ReadSize::Word)
+            },
             Addressing::Unknown => {
                 println!("Unknown Addressing mode");
-                ReadResult::None
+                0
             }
         }
     }
 
-    fn exec(&self) {}
+    fn exec(&mut self, instruction: Instruction, opeland: u16) {
+        //match instruction {
+        //    Instruction::ADC => {
+        //        let result = opeland as i16 + self.a as i16 + self.p.carry as i16;
+        //        self.p.negative = (result & 0x0100) == 0x0100;
+        //        self.p.overflow = (!((self.a ^ opeland as i8) & 0x80) != 0) 
+        //            && (((self.a as i16 ^ result) & 0x80)) != 0;
+        //        //self.p.overflow =
+        //        //self.p.zero =
+        //        //self.p.carry =
+        //    },
+        //    _ => {}
+        //}
+    }
 
     pub fn run(&mut self) {
         let opcode = self.fetch();
@@ -272,10 +278,12 @@ impl Cpu {
                 op_info.2,
                 if op_info.2 == 0 { "unknown" } else { "" }
             );
+            let opeland = self.fetch_opeland(op_info.1);
+            self.exec(op_info.0, opeland);
         }
     }
 
-    fn get_instruction_info(&self, opcode: u8) -> (Instruction, Addressing, u8) {
+    fn get_instruction_info(&self, opcode: u16) -> (Instruction, Addressing, u8) {
         let index = opcode as usize;
         match opcode {
             //ADC
