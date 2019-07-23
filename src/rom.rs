@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 pub const INES_HEADER_SIZE: usize = 0x0010;
 
 pub fn load_rom(rom: Vec<u8>) -> (ProgramRom, CharacterRom) {

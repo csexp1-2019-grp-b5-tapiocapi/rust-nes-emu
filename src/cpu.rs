@@ -1,13 +1,39 @@
 use crate::cpu_bus;
 
 pub struct Cpu { 
+    regs: Registers,
+    bus: cpu_bus::CpuBus,
+}
+
+struct Registers {
     pub a: u8,   // accumlator register
     pub x: u8,   // index register
     pub y: u8,   // index register
     pub sp: u16, // stack pointer       (Begin from 0x1FD) Upper Bit is fixed to 0x01
     pub pc: u16, // program counter
     pub p: Status,
-    bus: cpu_bus::CpuBus,
+}
+
+impl Default for Registers {
+    fn default() -> Registers {
+        Registers {
+            a: 0x00,
+            x: 0x00,
+            y: 0x00,
+            sp: 0x01FD,
+            pc: 0x0000,
+            p: Status {
+                negative: false,
+                overflow: false,
+                reserved: true,
+                break_mode: true,
+                decimal: false,
+                interrupt: true,
+                zero: false,
+                carry: false,
+            },
+        }
+    }
 }
 
 pub struct Status {
@@ -129,42 +155,14 @@ enum ReadSize {
 impl Cpu {
     pub fn new(cpu_bus: cpu_bus::CpuBus) -> Cpu {
         Cpu {
-            a: 0x00,
-            x: 0x00,
-            y: 0x00,
-            sp: 0x01FD,
-            pc: 0x0000,
-            p: Status {
-                negative: false,
-                overflow: false,
-                reserved: true,
-                break_mode: true,
-                decimal: false,
-                interrupt: true,
-                zero: false,
-                carry: false,
-            },
+            regs: Default::default(),
             bus: cpu_bus,
         }
     }
 
     pub fn reset(&mut self) {
-        self.a = 0x00;
-        self.x = 0x00;
-        self.y = 0x00;
-        self.sp = 0x01FD;
-        self.pc = 0x0000;
-        self.p = Status {
-            negative: false,
-            overflow: false,
-            reserved: true,
-            break_mode: true,
-            decimal: false,
-            interrupt: true,
-            zero: false,
-            carry: false,
-        };
-        self.pc = self.read(0xFFFC, ReadSize::Word);
+        self.regs = Default::default();
+        self.regs.pc = self.read(0xFFFC, ReadSize::Word);
     }
 
     fn read(&mut self, addr: u16, size: ReadSize) -> u16 {
@@ -184,9 +182,9 @@ impl Cpu {
 
     // fetch opcode (8-bit)
     fn fetch(&mut self) -> u16 {
-        let data = self.read(self.pc, ReadSize::Byte);
-        self.pc += if self.pc < 0xFFFF { 1 } else { 0 };
-        //println!("{:x}", self.pc);
+        let data = self.read(self.regs.pc, ReadSize::Byte);
+        self.regs.pc += if self.regs.pc < 0xFFFF { 1 } else { 0 };
+        //println!("{:x}", self.regs.pc);
         data
     }
 
@@ -203,28 +201,28 @@ impl Cpu {
             },
             Addressing::ZeroPage => {self.fetch() as u16},
             Addressing::ZeroPageX => {
-                (self.fetch() as u16 + self.x as u16) & 0xFF
+                (self.fetch() as u16 + self.regs.x as u16) & 0xFF
             },
             Addressing::ZeroPageY => { //?
-                (self.fetch() as u16 + self.y as u16 & 0xFF)
+                (self.fetch() as u16 + self.regs.y as u16 & 0xFF)
             },
             Addressing::AbsoluteX => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
-                bit + self.x as u16
+                bit + self.regs.x as u16
             },
             Addressing::AbsoluteY => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
-                (bit + self.y as u16)
+                (bit + self.regs.y as u16)
             },
             Addressing::Implied => {0},
             Addressing::Relative => {
-                let addr = self.pc;
+                let addr = self.regs.pc;
                 let offset = self.fetch() as u16;
                 addr + offset
             },
@@ -237,13 +235,13 @@ impl Cpu {
             },
             Addressing::IndirectX => {
                 let mut lower = self.fetch() as u16;
-                lower += self.x as u16;
+                lower += self.regs.x as u16;
                 lower &= 0x00FF;
                 self.read(lower, ReadSize::Word)
             },
             Addressing::IndirectY => {
                 let mut lower = self.fetch() as u16;
-                lower += self.y as u16;
+                lower += self.regs.y as u16;
                 lower &= 0x00FF;
                 self.read(lower, ReadSize::Word)
             },
@@ -257,7 +255,7 @@ impl Cpu {
     fn exec(&mut self, instruction: &Instruction, addressing: &Addressing, operand: u16) {
         match instruction {
             Instruction::ADC => {
-                //let result = operand as i16 + self.a as i16 + self.p.carry as i16;
+                //let result = operand as i16 + self.regs.a as i16 + self.regs.p.carry as i16;
                 println!("ADC");
             },
             Instruction::SBC => {
@@ -312,11 +310,11 @@ impl Cpu {
                 print!("BIT");
             },
             Instruction::JMP => {
-                self.pc = operand;
-                print!("JMP {:x} -> pc:{:x}", operand, self.pc);
+                self.regs.pc = operand;
+                print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
             },
             Instruction::JSR => {
-                self.pc = operand;
+                self.regs.pc = operand;
                 print!("JSR");
             },
             Instruction::RTS => {
@@ -353,67 +351,67 @@ impl Cpu {
                 print!("INY");
             },
             Instruction::DEY => {
-                let mut y = self.y as i8;
+                let mut y = self.regs.y as i8;
                 y -= 1;
                 print!("DEY");
             },
             Instruction::CLC => {
-                self.p.carry = false;
+                self.regs.p.carry = false;
                 print!("CLC");
             },
             Instruction::SEC => {
-                self.p.carry = true;
+                self.regs.p.carry = true;
                 print!("SEC");
             },
             Instruction::CLI => {
-                self.p.interrupt = false;
+                self.regs.p.interrupt = false;
                 print!("CLI false -> p.interrupt");
             },
             Instruction::SEI => {
-                self.p.interrupt = true;
+                self.regs.p.interrupt = true;
                 print!("SEI true -> p.interrupt");
             },
             Instruction::CLD => {
-                self.p.decimal = false;
+                self.regs.p.decimal = false;
                 print!("CLD false -> p.decimal");
             },
             Instruction::SED => {
-                self.p.decimal = true;
+                self.regs.p.decimal = true;
                 print!("SED true -> p.decimal");
             },
             Instruction::CLV => {
-                self.p.overflow = false;
+                self.regs.p.overflow = false;
                 print!("CLV false -> p.overflow");
             },
             Instruction::LDA => {
-                //self.a = operand as u8;
-                self.a = match addressing {
+                //self.regs.a = operand as u8;
+                self.regs.a = match addressing {
                     Addressing::Immediate => {operand as u8},
                     _ => {
                         self.read(operand, ReadSize::Byte) as u8
                     }
                 };
-                self.p.zero = self.a == 0;
-                print!("LDA: {:x} -> A:{:x}", operand, self.a);
+                self.regs.p.zero = self.regs.a == 0;
+                print!("LDA: {:x} -> A:{:x}", operand, self.regs.a);
             },
             Instruction::LDX => {
-                self.x = operand as u8;
-                print!("LDX: X {}", self.x);
+                self.regs.x = operand as u8;
+                print!("LDX: X {}", self.regs.x);
             },
             Instruction::LDY => {
                 print!("LDY");
             },
             Instruction::STA => {
-                self.bus.write_by_cpu(operand, self.x);
-                print!("STA a:{:x} -> {:x}", self.a, operand);
+                self.bus.write_by_cpu(operand, self.regs.x);
+                print!("STA a:{:x} -> {:x}", self.regs.a, operand);
             },
             Instruction::STX => {
-                self.bus.write_by_cpu(operand, self.x);
-                print!("STX x:{:x} -> {:x}", self.x, operand);
+                self.bus.write_by_cpu(operand, self.regs.x);
+                print!("STX x:{:x} -> {:x}", self.regs.x, operand);
             },
             Instruction::STY => {
-                self.bus.write_by_cpu(operand, self.y);
-                print!("STY y:{:x} -> {:x}", self.y, operand);
+                self.bus.write_by_cpu(operand, self.regs.y);
+                print!("STY y:{:x} -> {:x}", self.regs.y, operand);
             },
             Instruction::TAX => {
                 print!("TAX");
@@ -428,26 +426,26 @@ impl Cpu {
                 print!("TYA");
             },
             Instruction::TSX => {
-                self.x = self.sp as u8;
-                self.p.negative = false;
-                self.p.zero = self.x == 0;
-                print!("TXS: S(SP){:x} -> X:{:x}", self.sp, self.x);
+                self.regs.x = self.regs.sp as u8;
+                self.regs.p.negative = false;
+                self.regs.p.zero = self.regs.x == 0;
+                print!("TXS: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
             },
             Instruction::TXS => {
-                self.sp = (self.x as u16) | 0x0100;
-                print!("TXS: X:{:x} -> S(SP):{:x}", self.x, self.sp);
+                self.regs.sp = (self.regs.x as u16) | 0x0100;
+                print!("TXS: X:{:x} -> S(SP):{:x}", self.regs.x, self.regs.sp);
             },
             Instruction::PHA => {
-                self.bus.write_by_cpu(self.sp, self.a);
-                self.sp += 1;
-                print!("PHA a:{:x} -> stack:{:x}", self.a, self.sp);
+                self.bus.write_by_cpu(self.regs.sp, self.regs.a);
+                self.regs.sp += 1;
+                print!("PHA a:{:x} -> stack:{:x}", self.regs.a, self.regs.sp);
             },
             Instruction::PLA => {
-                self.a = self.bus.read_by_cpu(self.sp);
-                self.sp -= 1;
-                self.p.negative = (self.a as i8) < 0;
-                self.p.zero = self.a == 0;
-                print!("PLA stack:{:x} -> A:{:x}", self.sp, self.a);
+                self.regs.a = self.bus.read_by_cpu(self.regs.sp);
+                self.regs.sp -= 1;
+                self.regs.p.negative = (self.regs.a as i8) < 0;
+                self.regs.p.zero = self.regs.a == 0;
+                print!("PLA stack:{:x} -> A:{:x}", self.regs.sp, self.regs.a);
             },
             Instruction::PHP => {
                 print!("PHP");
@@ -464,7 +462,7 @@ impl Cpu {
 
     pub fn run(&mut self) {
         let opcode = self.fetch();
-        if self.pc < 0x8080 {
+        if self.regs.pc < 0x8080 {
             let op_info = self.get_instruction_info(opcode);
             //println!(
             //    "{:x} {:x} {}",
