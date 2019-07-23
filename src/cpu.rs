@@ -1,6 +1,6 @@
 use crate::cpu_bus;
 
-pub struct Cpu { 
+pub struct Cpu {
     regs: Registers,
     bus: cpu_bus::CpuBus,
 }
@@ -190,61 +190,60 @@ impl Cpu {
 
     fn fetch_operand(&mut self, addressing: &Addressing) -> u16 {
         match addressing {
-            Addressing::Accumlator => {0},
-            Addressing::Immediate => {self.fetch()},
+            Addressing::Accumlator => 0,
+            Addressing::Immediate => self.fetch(),
             Addressing::Absolute => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
                 bit
-            },
-            Addressing::ZeroPage => {self.fetch() as u16},
-            Addressing::ZeroPageX => {
-                (self.fetch() as u16 + self.regs.x as u16) & 0xFF
-            },
-            Addressing::ZeroPageY => { //?
+            }
+            Addressing::ZeroPage => self.fetch() as u16,
+            Addressing::ZeroPageX => (self.fetch() as u16 + self.regs.x as u16) & 0xFF,
+            Addressing::ZeroPageY => {
+                //?
                 (self.fetch() as u16 + self.regs.y as u16 & 0xFF)
-            },
+            }
             Addressing::AbsoluteX => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
                 bit + self.regs.x as u16
-            },
+            }
             Addressing::AbsoluteY => {
                 let lower_bit = self.fetch();
                 let upper_bit = self.fetch();
                 let mut bit = (upper_bit as u16) << 8;
                 bit |= lower_bit as u16;
                 (bit + self.regs.y as u16)
-            },
-            Addressing::Implied => {0},
+            }
+            Addressing::Implied => 0,
             Addressing::Relative => {
                 let addr = self.regs.pc;
                 let offset = self.fetch() as u16;
                 addr + offset
-            },
+            }
             Addressing::Indirect => {
-                let lower_byte= self.fetch();
-                let upper_byte= self.fetch();
+                let lower_byte = self.fetch();
+                let upper_byte = self.fetch();
                 let mut byte = (upper_byte as u16) << 8;
                 byte |= lower_byte as u16;
                 self.read(byte, ReadSize::Word)
-            },
+            }
             Addressing::IndirectX => {
                 let mut lower = self.fetch() as u16;
                 lower += self.regs.x as u16;
                 lower &= 0x00FF;
                 self.read(lower, ReadSize::Word)
-            },
+            }
             Addressing::IndirectY => {
                 let mut lower = self.fetch() as u16;
                 lower += self.regs.y as u16;
                 lower &= 0x00FF;
                 self.read(lower, ReadSize::Word)
-            },
+            }
             Addressing::Unknown => {
                 println!("Unknown Addressing mode");
                 0
@@ -257,205 +256,203 @@ impl Cpu {
             Instruction::ADC => {
                 //let result = operand as i16 + self.regs.a as i16 + self.regs.p.carry as i16;
                 println!("ADC");
-            },
+            }
             Instruction::SBC => {
                 print!("SBC");
-            },
-            Instruction::AND => { 
+            }
+            Instruction::AND => {
                 print!("AND ");
-            },
+            }
             Instruction::ORA => {
                 print!("ORA ");
-            },
+            }
             Instruction::EOR => {
                 print!("EOR");
-            },
+            }
             Instruction::ASL => {
                 print!("ASL");
-            },
+            }
             Instruction::LSR => {
                 print!("LSR");
-            },
+            }
             Instruction::ROL => {
                 print!("ROL");
-            },
+            }
             Instruction::ROR => {
                 print!("ROR");
-            },
+            }
             Instruction::BCC => {
                 print!("BCC");
-            },
+            }
             Instruction::BCS => {
                 print!("BCS");
-            },
+            }
             Instruction::BEQ => {
                 print!("BEQ");
-            },
+            }
             Instruction::BNE => {
                 print!("BNE");
-            },
+            }
             Instruction::BVC => {
                 print!("BVC");
-            },
+            }
             Instruction::BVS => {
                 print!("BVS");
-            },
+            }
             Instruction::BPL => {
                 print!("BPL");
-            },
+            }
             Instruction::BMI => {
                 print!("BMI");
-            },
+            }
             Instruction::BIT => {
                 print!("BIT");
-            },
+            }
             Instruction::JMP => {
                 self.regs.pc = operand;
                 print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
-            },
+            }
             Instruction::JSR => {
                 self.regs.pc = operand;
                 print!("JSR");
-            },
+            }
             Instruction::RTS => {
                 print!("RTS");
-            },
+            }
             Instruction::BRK => {
                 print!("BRK");
-            },
+            }
             Instruction::RTI => {
                 print!("RTI");
-            },
+            }
             Instruction::CMP => {
                 print!("CMP");
-            },
+            }
             Instruction::CPX => {
                 print!("CPX");
-            },
+            }
             Instruction::CPY => {
                 print!("CPY");
-            },
+            }
             Instruction::INC => {
                 print!("INC");
-            },
+            }
             Instruction::DEC => {
                 print!("DEC");
-            },
+            }
             Instruction::INX => {
                 print!("INX");
-            },
+            }
             Instruction::DEX => {
                 print!("DEX");
-            },
+            }
             Instruction::INY => {
                 print!("INY");
-            },
+            }
             Instruction::DEY => {
                 let mut y = self.regs.y as i8;
                 y -= 1;
                 print!("DEY");
-            },
+            }
             Instruction::CLC => {
                 self.regs.p.carry = false;
                 print!("CLC");
-            },
+            }
             Instruction::SEC => {
                 self.regs.p.carry = true;
                 print!("SEC");
-            },
+            }
             Instruction::CLI => {
                 self.regs.p.interrupt = false;
                 print!("CLI false -> p.interrupt");
-            },
+            }
             Instruction::SEI => {
                 self.regs.p.interrupt = true;
                 print!("SEI true -> p.interrupt");
-            },
+            }
             Instruction::CLD => {
                 self.regs.p.decimal = false;
                 print!("CLD false -> p.decimal");
-            },
+            }
             Instruction::SED => {
                 self.regs.p.decimal = true;
                 print!("SED true -> p.decimal");
-            },
+            }
             Instruction::CLV => {
                 self.regs.p.overflow = false;
                 print!("CLV false -> p.overflow");
-            },
+            }
             Instruction::LDA => {
                 //self.regs.a = operand as u8;
                 self.regs.a = match addressing {
-                    Addressing::Immediate => {operand as u8},
-                    _ => {
-                        self.read(operand, ReadSize::Byte) as u8
-                    }
+                    Addressing::Immediate => operand as u8,
+                    _ => self.read(operand, ReadSize::Byte) as u8,
                 };
                 self.regs.p.zero = self.regs.a == 0;
                 print!("LDA: {:x} -> A:{:x}", operand, self.regs.a);
-            },
+            }
             Instruction::LDX => {
                 self.regs.x = operand as u8;
                 print!("LDX: X {}", self.regs.x);
-            },
+            }
             Instruction::LDY => {
                 print!("LDY");
-            },
+            }
             Instruction::STA => {
                 self.bus.write_by_cpu(operand, self.regs.x);
                 print!("STA a:{:x} -> {:x}", self.regs.a, operand);
-            },
+            }
             Instruction::STX => {
                 self.bus.write_by_cpu(operand, self.regs.x);
                 print!("STX x:{:x} -> {:x}", self.regs.x, operand);
-            },
+            }
             Instruction::STY => {
                 self.bus.write_by_cpu(operand, self.regs.y);
                 print!("STY y:{:x} -> {:x}", self.regs.y, operand);
-            },
+            }
             Instruction::TAX => {
                 print!("TAX");
-            },
+            }
             Instruction::TXA => {
                 print!("TXA");
-            },
+            }
             Instruction::TAY => {
                 print!("TAY");
-            },
+            }
             Instruction::TYA => {
                 print!("TYA");
-            },
+            }
             Instruction::TSX => {
                 self.regs.x = self.regs.sp as u8;
                 self.regs.p.negative = false;
                 self.regs.p.zero = self.regs.x == 0;
                 print!("TXS: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
-            },
+            }
             Instruction::TXS => {
                 self.regs.sp = (self.regs.x as u16) | 0x0100;
                 print!("TXS: X:{:x} -> S(SP):{:x}", self.regs.x, self.regs.sp);
-            },
+            }
             Instruction::PHA => {
                 self.bus.write_by_cpu(self.regs.sp, self.regs.a);
                 self.regs.sp += 1;
                 print!("PHA a:{:x} -> stack:{:x}", self.regs.a, self.regs.sp);
-            },
+            }
             Instruction::PLA => {
                 self.regs.a = self.bus.read_by_cpu(self.regs.sp);
                 self.regs.sp -= 1;
                 self.regs.p.negative = (self.regs.a as i8) < 0;
                 self.regs.p.zero = self.regs.a == 0;
                 print!("PLA stack:{:x} -> A:{:x}", self.regs.sp, self.regs.a);
-            },
+            }
             Instruction::PHP => {
                 print!("PHP");
-            },
+            }
             Instruction::PLP => {
                 print!("PLP");
-            },
+            }
             Instruction::NOP => {
                 print!("NOP");
-            },
+            }
             _ => {}
         }
     }

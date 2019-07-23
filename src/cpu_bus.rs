@@ -1,5 +1,5 @@
-use crate::wram;
 use crate::rom;
+use crate::wram;
 
 pub struct CpuBus {
     wram: wram::Wram,

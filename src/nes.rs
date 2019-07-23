@@ -1,13 +1,13 @@
 use crate::cpu::Cpu;
 use crate::cpu_bus::CpuBus;
-use crate::wram::Wram;
 use crate::rom;
+use crate::wram::Wram;
 
 use std::io;
 use std::path::Path;
 
 pub struct Nes {
-    cpu: Cpu
+    cpu: Cpu,
 }
 
 impl Nes {
@@ -20,7 +20,7 @@ impl Nes {
         let cpu_bus = CpuBus::new(wram, prog, chr);
 
         Ok(Nes {
-            cpu: Cpu::new(cpu_bus)
+            cpu: Cpu::new(cpu_bus),
         })
     }
 

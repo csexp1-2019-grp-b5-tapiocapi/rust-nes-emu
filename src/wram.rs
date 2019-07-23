@@ -4,9 +4,7 @@ pub struct Wram {
 
 impl Wram {
     pub fn new(size: usize) -> Wram {
-        Wram {
-            ram: vec![0; size]
-        }
+        Wram { ram: vec![0; size] }
     }
 
     pub fn reset(&mut self) {

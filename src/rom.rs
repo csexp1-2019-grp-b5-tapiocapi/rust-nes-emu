@@ -10,12 +10,13 @@ pub fn load(rom: Vec<u8>) -> (ProgramRom, CharacterRom) {
         0x0
     };
 
-    let character_rom_start = (INES_HEADER_SIZE + trainer_size + program_rom_size * 0x4000) as usize;  //16KiB -> 0x4000
-    let character_rom_end = (character_rom_start + character_rom_size * 0x2000) as usize;  //8Kib  -> 0x2000
+    let character_rom_start =
+        (INES_HEADER_SIZE + trainer_size + program_rom_size * 0x4000) as usize; //16KiB -> 0x4000
+    let character_rom_end = (character_rom_start + character_rom_size * 0x2000) as usize; //8Kib  -> 0x2000
 
     (
         ProgramRom::new(&rom[INES_HEADER_SIZE..character_rom_start]),
-        CharacterRom::new(&rom[character_rom_start..character_rom_end])
+        CharacterRom::new(&rom[character_rom_start..character_rom_end]),
     )
 }
 
@@ -34,7 +35,6 @@ impl ProgramRom {
         return self.data[addr as usize];
     }
 }
-
 
 pub struct CharacterRom {
     pub data: Vec<u8>,

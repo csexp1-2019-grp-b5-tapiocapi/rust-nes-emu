@@ -3,7 +3,7 @@ use crate::wram::Wram;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Sprite {
-    data: [[u8; 8]; 8]
+    data: [[u8; 8]; 8],
 }
 
 impl Sprite {
@@ -11,9 +11,9 @@ impl Sprite {
         let mut data = [[0u8; 8]; 8];
 
         for i in 0..16 {
-            for j in (0..8) {
+            for j in 0..8 {
                 let k = 7 - j;
-                data[i % 8][j] += ((chr[i] & (1 << k)) >> k);
+                data[i % 8][j] += (chr[i] & (1 << k)) >> k;
             }
         }
 
@@ -30,7 +30,7 @@ impl Ppu {
     pub fn new(chr_rom: &CharacterRom) -> Ppu {
         Ppu {
             sprites: chr_rom.data.chunks(16).map(Sprite::new).collect(),
-            vram: Wram::new(2048)
+            vram: Wram::new(2048),
         }
     }
 
@@ -56,15 +56,15 @@ impl Ppu {
             2 => {
                 /* PPU state */
                 unimplemented!();
-            },
+            }
             4 => {
                 /* OAM data */
                 unimplemented!();
-            },
+            }
             7 => {
                 /* PPU data */
                 unimplemented!();
-            },
+            }
             _ => {
                 unimplemented!();
             }
@@ -76,31 +76,31 @@ impl Ppu {
             0 => {
                 /* PPU CTL */
                 unimplemented!();
-            },
+            }
             1 => {
                 /* PPU MASK */
                 unimplemented!();
-            },
+            }
             3 => {
                 /* OAM ADDR */
                 unimplemented!();
-            },
+            }
             4 => {
                 /* OAM DATA */
                 unimplemented!();
-            },
+            }
             5 => {
                 /* PPU SCROLL */
                 unimplemented!();
-            },
+            }
             6 => {
                 /* PPU ADDR */
                 unimplemented!();
-            },
+            }
             7 => {
                 /* PPU DATA */
                 unimplemented!();
-            },
+            }
             _ => {
                 unimplemented!();
             }
@@ -119,5 +119,30 @@ fn sprite_test() {
     let ppu = Ppu::new(&chr_rom);
 
     println!("chr rom size: {}", chr_rom.data.len());
-    ppu.show_all();
+    //ppu.show_all();
+
+    let title = "Sprite";
+    for sprite in ppu.sprites {
+        println!("Showing");
+        let mut img =
+            unsafe { opencv::core::Mat::new_rows_cols(8, 8, opencv::core::CV_8UC1).unwrap() };
+        for i in 0..8 {
+            for j in 0..8 {
+                *img.at_2d_mut(i, j).unwrap() = sprite.data[i as usize][j as usize] * 63;
+            }
+        }
+
+        let mut scaled = opencv::core::Mat::new().unwrap();
+        opencv::imgproc::resize(
+            &img,
+            &mut scaled,
+            opencv::core::Size::new(512, 512),
+            0.0,
+            0.0,
+            0,
+        );
+
+        opencv::highgui::imshow(title, &scaled);
+        opencv::highgui::wait_key(0).unwrap();
+    }
 }
