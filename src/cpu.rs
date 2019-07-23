@@ -438,11 +438,16 @@ impl Cpu {
                 print!("TXS: X:{:x} -> S(SP):{:x}", self.x, self.sp);
             },
             Instruction::PHA => {
-                self.sp = self.a as u16;
-                print!("PHA a:{:x} -> sp:{:x}", self.a, self.sp);
+                self.bus.write_by_cpu(self.sp, self.a);
+                self.sp += 1;
+                print!("PHA a:{:x} -> stack:{:x}", self.a, self.sp);
             },
             Instruction::PLA => {
-                print!("PLA");
+                self.a = self.bus.read_by_cpu(self.sp);
+                self.sp -= 1;
+                self.p.negative = (self.a as i8) < 0;
+                self.p.zero = self.a == 0;
+                print!("PLA stack:{:x} -> A:{:x}", self.sp, self.a);
             },
             Instruction::PHP => {
                 print!("PHP");
