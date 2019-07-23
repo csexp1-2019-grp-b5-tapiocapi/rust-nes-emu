@@ -282,32 +282,69 @@ impl Cpu {
                 print!("ROR");
             }
             Instruction::BCC => {
-                print!("BCC");
-            }
+                //self.regs.pc += operand;
+                print!("BCC ");
+                self.regs.pc = if !self.regs.p.carry {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BCS => {
-                print!("BCS");
-            }
+                print!("BCS ");
+                self.regs.pc = if self.regs.p.carry {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BEQ => {
-                print!("BEQ");
-            }
+                print!("BEQ ");
+                self.regs.pc = if self.regs.p.zero {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BNE => {
-                print!("BNE");
-            }
+                print!("BNE ");
+                self.regs.pc = if !self.regs.p.zero {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BVC => {
-                print!("BVC");
-            }
+                print!("BVC ");
+                self.regs.pc = if !self.regs.p.overflow {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BVS => {
-                print!("BVS");
-            }
+                print!("BVS ");
+                self.regs.pc = if self.regs.p.overflow {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BPL => {
-                print!("BPL");
-            }
+                print!("BPL ");
+                self.regs.pc = if !self.regs.p.negative {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BMI => {
-                print!("BMI");
-            }
+                print!("BMI ");
+                self.regs.pc = if self.regs.p.negative {
+                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    operand
+                } else {self.regs.pc};
+            },
             Instruction::BIT => {
-                print!("BIT");
-            }
+                let result = self.regs.a as u16 & operand;
+                self.regs.p.zero = result == 0;
+                self.regs.p.negative = result & (1 << 7) == 0b1000_0000;
+                self.regs.p.overflow = result & (1 << 6) == 0b0100_0000;
+                print!("BIT ");
+            },
             Instruction::JMP => {
                 self.regs.pc = operand;
                 print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
