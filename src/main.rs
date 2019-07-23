@@ -3,6 +3,7 @@ mod cpu_bus;
 mod nes;
 mod wram;
 mod rom;
+mod ppu;
 
 use nes::Nes;
 use std::io;

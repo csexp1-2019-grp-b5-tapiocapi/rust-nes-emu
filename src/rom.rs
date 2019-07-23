@@ -1,10 +1,10 @@
 pub const INES_HEADER_SIZE: usize = 0x0010;
 
-pub fn load_rom(rom: Vec<u8>) -> (ProgramRom, CharacterRom) {
+pub fn load(rom: Vec<u8>) -> (ProgramRom, CharacterRom) {
     let program_rom_size = rom[4] as usize;
     let character_rom_size = rom[5] as usize;
 
-    let trainer_size = if (rom[6] & 0b0000_0010) == 0b0000_0010 {
+    let trainer_size = if (rom[6] & 0b0000_0100) == 0b0000_0100 {
         0x200
     } else {
         0x0
@@ -37,7 +37,7 @@ impl ProgramRom {
 
 
 pub struct CharacterRom {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl CharacterRom {

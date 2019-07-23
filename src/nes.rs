@@ -14,7 +14,7 @@ impl Nes {
     pub fn load<P: AsRef<Path>>(file_path: P) -> io::Result<Nes> {
         let buffer = std::fs::read(file_path.as_ref())?;
 
-        let (prog, chr) = rom::load_rom(buffer);
+        let (prog, chr) = rom::load(buffer);
         let wram = Wram::new(2048);
 
         let cpu_bus = CpuBus::new(wram, prog, chr);
