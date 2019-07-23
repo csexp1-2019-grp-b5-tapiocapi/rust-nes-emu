@@ -364,6 +364,9 @@ impl Cpu {
                 print!("JSR");
             }
             Instruction::RTS => {
+                let lower = self.pop() as u16;
+                let upper = self.pop() as u16;
+                self.regs.pc = (upper << 8) | lower;
                 print!("RTS");
             }
             Instruction::BRK => {
@@ -373,12 +376,33 @@ impl Cpu {
                 print!("RTI");
             }
             Instruction::CMP => {
+                let m = match addressing {
+                    Addressing::Immediate => {operand},
+                    _ => {self.read(operand, ReadSize::Byte)}
+                };
+                self.regs.p.carry = self.regs.a >= m as u8;
+                self.regs.p.zero = self.regs.a == m as u8;
+                self.regs.p.negative = (self.regs.a - m as u8) & (1 << 7) == 1;
                 print!("CMP");
             }
             Instruction::CPX => {
+                let m = match addressing {
+                    Addressing::Immediate => {operand},
+                    _ => {self.read(operand, ReadSize::Byte)}
+                };
+                self.regs.p.carry = self.regs.x >= m as u8;
+                self.regs.p.zero = self.regs.x == m as u8;
+                self.regs.p.negative = (self.regs.x - m as u8) & (1 << 7) == 1;
                 print!("CPX");
             }
             Instruction::CPY => {
+                let m = match addressing {
+                    Addressing::Immediate => {operand},
+                    _ => {self.read(operand, ReadSize::Byte)}
+                };
+                self.regs.p.carry = self.regs.y >= m as u8;
+                self.regs.p.zero = self.regs.y == m as u8;
+                self.regs.p.negative = (self.regs.y - m as u8) & (1 << 7) == 1;
                 print!("CPY");
             }
             Instruction::INC => {
