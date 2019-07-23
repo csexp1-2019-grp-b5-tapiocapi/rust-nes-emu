@@ -140,7 +140,7 @@ fn sprite_test() {
             0.0,
             0.0,
             0,
-        );
+        ).unwrap();
 
         opencv::highgui::imshow(title, &scaled);
         opencv::highgui::wait_key(0).unwrap();
