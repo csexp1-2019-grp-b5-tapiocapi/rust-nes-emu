@@ -8,7 +8,7 @@ use nes::Nes;
 use std::io;
 
 fn nes_main() -> io::Result<i32> {
-    let nes = Nes::load("./sample1/sample1.nes")?;
+    let nes = Nes::load("../sample1/sample1.nes")?;
     nes.start();
 
     Ok(0)

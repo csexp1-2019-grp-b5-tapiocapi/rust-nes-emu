@@ -7,16 +7,12 @@ impl Rom {
         let from = range.0 as usize;
         let to = range.1 as usize;
 
-        //println!("{:?}", entire_rom[from..=to].to_vec());
+        //println!("{:?}", entire_rom[from..=to].to_vec()/*.len()*/);
         Rom {
             rom: entire_rom[from..=to].to_vec(),
         }
     }
 
-    //pub fn reset(&self) {
-    //}
-    //pub fn write(&self) {
-    //}
     pub fn read(&self, addr: u16) -> u8 {
         return self.rom[addr as usize];
     }

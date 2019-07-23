@@ -1,8 +1,8 @@
 use crate::cpu_bus;
-pub struct Cpu {
-    pub a: i8,   // accumlator register
-    pub x: i8,   // index register
-    pub y: i8,   // index register
+pub struct Cpu { 
+    pub a: u8,   // accumlator register
+    pub x: u8,   // index register
+    pub y: u8,   // index register
     pub sp: u16, // stack pointer       (Begin from 0x1FD) Upper Bit is fixed to 0x01
     pub pc: u16, // program counter
     pub p: Status,
@@ -98,8 +98,8 @@ enum Instruction {
     PHP, // Push P on stack
     PLP, // Pull P from stack
     NOP, // No operation
-    NOPI,
-    NOPD,
+    //NOPI,
+    //NOPD,
     Unknown,
 }
 
@@ -172,9 +172,9 @@ impl Cpu {
             ReadSize::Word => {
                 let lower = bus.read_by_cpu(addr);
                 let upper = bus.read_by_cpu(addr + 0x0001);
-                let mut bit = (upper as u16) << 8;
-                bit |= lower as u16;
-                bit
+                let mut byte = (upper as u16) << 8;
+                byte |= lower as u16;
+                byte
                 //println!("{} {} ", lower, upper);
             }
             ReadSize::Byte => bus.read_by_cpu(addr) as u16,
@@ -254,32 +254,198 @@ impl Cpu {
     }
 
     fn exec(&mut self, instruction: Instruction, opeland: u16) {
-        //match instruction {
-        //    Instruction::ADC => {
-        //        let result = opeland as i16 + self.a as i16 + self.p.carry as i16;
-        //        self.p.negative = (result & 0x0100) == 0x0100;
-        //        self.p.overflow = (!((self.a ^ opeland as i8) & 0x80) != 0) 
-        //            && (((self.a as i16 ^ result) & 0x80)) != 0;
-        //        //self.p.overflow =
-        //        //self.p.zero =
-        //        //self.p.carry =
-        //    },
-        //    _ => {}
-        //}
+        match instruction {
+            Instruction::ADC => {
+                let result = opeland as i16 + self.a as i16 + self.p.carry as i16;
+                println!("ADC");
+            },
+            Instruction::SBC => {
+                print!("SBC");
+            },
+            Instruction::AND => { 
+                print!("AND ");
+            },
+            Instruction::ORA => {
+                print!("ORA ");
+            },
+            Instruction::EOR => {
+                print!("EOR");
+            },
+            Instruction::ASL => {
+                print!("ASL");
+            },
+            Instruction::LSR => {
+                print!("LSR");
+            },
+            Instruction::ROL => {
+                print!("ROL");
+            },
+            Instruction::ROR => {
+                print!("ROR");
+            },
+            Instruction::BCC => {
+                print!("BCC");
+            },
+            Instruction::BCS => {
+                print!("BCS");
+            },
+            Instruction::BEQ => {
+                print!("BEQ");
+            },
+            Instruction::BNE => {
+                print!("BNE");
+            },
+            Instruction::BVC => {
+                print!("BVC");
+            },
+            Instruction::BVS => {
+                print!("BVS");
+            },
+            Instruction::BPL => {
+                print!("BPL");
+            },
+            Instruction::BMI => {
+                print!("BMI");
+            },
+            Instruction::BIT => {
+                print!("BIT");
+            },
+            Instruction::JMP => {
+                print!("JMP");
+            },
+            Instruction::JSR => {
+                print!("JSR");
+            },
+            Instruction::RTS => {
+                print!("RTS");
+            },
+            Instruction::BRK => {
+                print!("BRK");
+            },
+            Instruction::RTI => {
+                print!("RTI");
+            },
+            Instruction::CMP => {
+                print!("CMP");
+            },
+            Instruction::CPX => {
+                print!("CPX");
+            },
+            Instruction::CPY => {
+                print!("CPY");
+            },
+            Instruction::INC => {
+                print!("INC");
+            },
+            Instruction::DEC => {
+                print!("DEC");
+            },
+            Instruction::INX => {
+                print!("INX");
+            },
+            Instruction::DEX => {
+                print!("DEX");
+            },
+            Instruction::INY => {
+                print!("INY");
+            },
+            Instruction::DEY => {
+                print!("DEY");
+            },
+            Instruction::CLC => {
+                print!("CLC");
+            },
+            Instruction::SEC => {
+                print!("SEC");
+            },
+            Instruction::CLI => {
+                print!("CLI");
+            },
+            Instruction::SEI => {
+                print!("SEI:");
+                self.p.interrupt = true;
+            },
+            Instruction::CLD => {
+                print!("CLD");
+            },
+            Instruction::SED => {
+                print!("SED");
+            },
+            Instruction::CLV => {
+                print!("CLV");
+            },
+            Instruction::LDA => {
+                //self.a = opeland as u8;
+                self.p.zero = self.a == 0;
+                print!("LDA: {:x} -> A:{:x}", opeland, self.a);
+            },
+            Instruction::LDX => {
+                self.x = opeland as u8;
+                print!("LDX: X {}", self.x);
+            },
+            Instruction::LDY => {
+                print!("LDY");
+            },
+            Instruction::STA => {
+                print!("STA");
+            },
+            Instruction::STX => {
+                print!("STX");
+            },
+            Instruction::STY => {
+                print!("STY");
+            },
+            Instruction::TAX => {
+                print!("TAX");
+            },
+            Instruction::TXA => {
+                print!("TXA");
+            },
+            Instruction::TAY => {
+                print!("TAY");
+            },
+            Instruction::TYA => {
+                print!("TYA");
+            },
+            Instruction::TSX => {
+                print!("TXS: S(SP){:x} -> X:{:x}", self.sp, self.x);
+            },
+            Instruction::TXS => {
+                self.sp = (self.x as u16) | 0x0100;
+                print!("TXS: X:{:x} -> S(SP):{:x}", self.x, self.sp);
+            },
+            Instruction::PHA => {
+                print!("PHA");
+            },
+            Instruction::PLA => {
+                print!("PLA");
+            },
+            Instruction::PHP => {
+                print!("PHP");
+            },
+            Instruction::PLP => {
+                print!("PLP");
+            },
+            Instruction::NOP => {
+                print!("NOP");
+            },
+            _ => {}
+        }
     }
 
     pub fn run(&mut self) {
         let opcode = self.fetch();
         if self.pc < 0x8080 {
             let op_info = self.get_instruction_info(opcode);
-            println!(
-                "{:x} {:x} {}",
-                opcode,
-                op_info.2,
-                if op_info.2 == 0 { "unknown" } else { "" }
-            );
+            //println!(
+            //    "{:x} {:x} {}",
+            //    opcode,
+            //    op_info.2,
+            //    if op_info.2 == 0 { "unknown" } else { "" }
+            //);
             let opeland = self.fetch_opeland(op_info.1);
             self.exec(op_info.0, opeland);
+            println!(" opcode {:x} opeland {:x}", opcode, opeland);
         }
     }
 
