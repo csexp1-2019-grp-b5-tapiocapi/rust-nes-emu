@@ -1,4 +1,5 @@
 use crate::cpu_bus;
+
 pub struct Cpu { 
     pub a: u8,   // accumlator register
     pub x: u8,   // index register
@@ -126,7 +127,7 @@ enum ReadSize {
 }
 
 impl Cpu {
-    pub fn init(cpu_bus: cpu_bus::CpuBus) -> Cpu {
+    pub fn new(cpu_bus: cpu_bus::CpuBus) -> Cpu {
         Cpu {
             a: 0x00,
             x: 0x00,

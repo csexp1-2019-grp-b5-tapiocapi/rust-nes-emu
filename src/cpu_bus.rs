@@ -1,16 +1,18 @@
-use crate::ram;
+use crate::wram;
 use crate::rom;
 
 pub struct CpuBus {
-    ram: ram::Ram,
-    rom: rom::Rom,
+    wram: wram::Wram,
+    prog_rom: rom::ProgramRom,
+    chr_rom: rom::CharacterRom,
 }
 
 impl CpuBus {
-    pub fn init(nes_ram: ram::Ram, nes_rom: rom::Rom) -> CpuBus {
+    pub fn new(wram: wram::Wram, prog_rom: rom::ProgramRom, chr_rom: rom::CharacterRom) -> CpuBus {
         CpuBus {
-            ram: nes_ram,
-            rom: nes_rom,
+            wram,
+            prog_rom,
+            chr_rom,
         }
     }
 
@@ -18,10 +20,10 @@ impl CpuBus {
         //println!("read_by_cpu {:x}", addr);
         if addr < 0x0800 {
             // WRAM
-            self.ram.read(addr)
+            self.wram.read(addr)
         } else if addr < 0x2000 {
             // WRAM Mirror
-            self.ram.read(addr - 0x800)
+            self.wram.read(addr - 0x800)
         } else if addr < 0x2008 {
             // PPU Register
             0
@@ -42,12 +44,12 @@ impl CpuBus {
             0
         } else if addr < 0xC000 {
             // PRG-ROM
-            self.rom.read(addr - 0x8000)
+            self.prog_rom.read(addr - 0x8000)
         } else {
             //0xC000 ~ 0xFFFF   // PRG-ROM
-            self.rom.read(addr - 0x8000)
+            self.prog_rom.read(addr - 0x8000)
         }
     }
 
-    fn write_by_cpu(&self, addr: u16, data: u8) {}
+    pub fn write_by_cpu(&self, addr: u16, data: u8) {}
 }
