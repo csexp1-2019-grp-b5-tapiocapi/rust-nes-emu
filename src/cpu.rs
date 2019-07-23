@@ -179,6 +179,16 @@ impl Cpu {
             ReadSize::Byte => bus.read_by_cpu(addr) as u16,
         }
     }
+    fn push(&mut self, data: u8) {
+        self.bus.write_by_cpu(self.regs.sp, data);
+        self.regs.sp += 1;
+    }
+
+    fn pop(&mut self) -> u8 {
+        let data = self.bus.read_by_cpu(self.regs.sp);
+        self.regs.sp -= 1;
+        data
+    }
 
     // fetch opcode (8-bit)
     fn fetch(&mut self) -> u16 {
@@ -473,12 +483,11 @@ impl Cpu {
                 print!("TXS: X:{:x} -> S(SP):{:x}", self.regs.x, self.regs.sp);
             },
             Instruction::PHA => {
-                self.bus.write_by_cpu(self.regs.sp, self.regs.a);
-                self.regs.sp += 1;
+                self.push(self.regs.a);
                 print!("PHA a:{:x} -> stack:{:x}", self.regs.a, self.regs.sp);
             },
             Instruction::PLA => {
-                self.regs.a = self.bus.read_by_cpu(self.regs.sp);
+                self.regs.a = self.pop();
                 self.regs.sp -= 1;
                 self.regs.p.negative = (self.regs.a as i8) < 0;
                 self.regs.p.zero = self.regs.a == 0;
