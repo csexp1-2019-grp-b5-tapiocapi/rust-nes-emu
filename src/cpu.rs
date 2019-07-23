@@ -189,7 +189,7 @@ impl Cpu {
         data
     }
 
-    fn fetch_opeland(&mut self, addressing: Addressing) -> u16 {
+    fn fetch_operand(&mut self, addressing: &Addressing) -> u16 {
         match addressing {
             Addressing::Accumlator => {0},
             Addressing::Immediate => {self.fetch()},
@@ -253,10 +253,10 @@ impl Cpu {
         }
     }
 
-    fn exec(&mut self, instruction: Instruction, opeland: u16) {
+    fn exec(&mut self, instruction: &Instruction, addressing: &Addressing, operand: u16) {
         match instruction {
             Instruction::ADC => {
-                let result = opeland as i16 + self.a as i16 + self.p.carry as i16;
+                //let result = operand as i16 + self.a as i16 + self.p.carry as i16;
                 println!("ADC");
             },
             Instruction::SBC => {
@@ -311,9 +311,11 @@ impl Cpu {
                 print!("BIT");
             },
             Instruction::JMP => {
-                print!("JMP");
+                self.pc = operand;
+                print!("JMP {:x} -> pc:{:x}", operand, self.pc);
             },
             Instruction::JSR => {
+                self.pc = operand;
                 print!("JSR");
             },
             Instruction::RTS => {
@@ -350,50 +352,67 @@ impl Cpu {
                 print!("INY");
             },
             Instruction::DEY => {
+                let mut y = self.y as i8;
+                y -= 1;
                 print!("DEY");
             },
             Instruction::CLC => {
+                self.p.carry = false;
                 print!("CLC");
             },
             Instruction::SEC => {
+                self.p.carry = true;
                 print!("SEC");
             },
             Instruction::CLI => {
-                print!("CLI");
+                self.p.interrupt = false;
+                print!("CLI false -> p.interrupt");
             },
             Instruction::SEI => {
-                print!("SEI:");
                 self.p.interrupt = true;
+                print!("SEI true -> p.interrupt");
             },
             Instruction::CLD => {
-                print!("CLD");
+                self.p.decimal = false;
+                print!("CLD false -> p.decimal");
             },
             Instruction::SED => {
-                print!("SED");
+                self.p.decimal = true;
+                print!("SED true -> p.decimal");
             },
             Instruction::CLV => {
-                print!("CLV");
+                self.p.overflow = false;
+                print!("CLV false -> p.overflow");
             },
             Instruction::LDA => {
-                //self.a = opeland as u8;
+                //self.a = operand as u8;
+                self.a = match addressing {
+                    Addressing::Immediate => {operand as u8},
+                    _ => {
+                        self.read(operand, ReadSize::Byte) as u8
+                    }
+                };
                 self.p.zero = self.a == 0;
-                print!("LDA: {:x} -> A:{:x}", opeland, self.a);
+                print!("LDA: {:x} -> A:{:x}", operand, self.a);
             },
             Instruction::LDX => {
-                self.x = opeland as u8;
+                self.x = operand as u8;
                 print!("LDX: X {}", self.x);
             },
             Instruction::LDY => {
                 print!("LDY");
             },
             Instruction::STA => {
-                print!("STA");
+                self.bus.write_by_cpu(operand, self.x);
+                print!("STA a:{:x} -> {:x}", self.a, operand);
             },
             Instruction::STX => {
-                print!("STX");
+                self.bus.write_by_cpu(operand, self.x);
+                print!("STX x:{:x} -> {:x}", self.x, operand);
             },
             Instruction::STY => {
-                print!("STY");
+                self.bus.write_by_cpu(operand, self.y);
+                print!("STY y:{:x} -> {:x}", self.y, operand);
             },
             Instruction::TAX => {
                 print!("TAX");
@@ -408,6 +427,9 @@ impl Cpu {
                 print!("TYA");
             },
             Instruction::TSX => {
+                self.x = self.sp as u8;
+                self.p.negative = false;
+                self.p.zero = self.x == 0;
                 print!("TXS: S(SP){:x} -> X:{:x}", self.sp, self.x);
             },
             Instruction::TXS => {
@@ -415,7 +437,8 @@ impl Cpu {
                 print!("TXS: X:{:x} -> S(SP):{:x}", self.x, self.sp);
             },
             Instruction::PHA => {
-                print!("PHA");
+                self.sp = self.a as u16;
+                print!("PHA a:{:x} -> sp:{:x}", self.a, self.sp);
             },
             Instruction::PLA => {
                 print!("PLA");
@@ -443,9 +466,9 @@ impl Cpu {
             //    op_info.2,
             //    if op_info.2 == 0 { "unknown" } else { "" }
             //);
-            let opeland = self.fetch_opeland(op_info.1);
-            self.exec(op_info.0, opeland);
-            println!(" opcode {:x} opeland {:x}", opcode, opeland);
+            let operand = self.fetch_operand(&op_info.1);
+            self.exec(&op_info.0, &op_info.1, operand);
+            println!(" opcode {:x} operand {:x}", opcode, operand);
         }
     }
 
