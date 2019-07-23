@@ -183,6 +183,28 @@ impl Cpu {
         self.bus.write_by_cpu(self.regs.sp, data);
         self.regs.sp += 1;
     }
+    
+    fn push_status(&mut self) {
+        self.push(if self.regs.p.negative {1} else {0});
+        self.push(if self.regs.p.overflow {1} else {0});
+        self.push(1);
+        self.push(if self.regs.p.break_mode {1} else {0});
+        self.push(if self.regs.p.decimal {1} else {0});
+        self.push(if self.regs.p.interrupt {1} else {0});
+        self.push(if self.regs.p.zero {1} else {0});
+        self.push(if self.regs.p.negative {1} else {0});
+    }
+
+    fn pop_status(&mut self) {
+        self.regs.p.negative = if self.pop() == 0 {false} else {true};
+        self.regs.p.overflow = if self.pop() == 0 {false} else {true};
+        self.regs.p.reserved = self.pop() == 1;
+        self.regs.p.break_mode = if self.pop() == 0 {false} else {true};
+        self.regs.p.decimal = if self.pop() == 0 {false} else {true};
+        self.regs.p.interrupt= if self.pop() == 0 {false} else {true};
+        self.regs.p.zero = if self.pop() == 0 {false} else {true};
+        self.regs.p.negative = if self.pop() == 0 {false} else {true};
+    }
 
     fn pop(&mut self) -> u8 {
         let data = self.bus.read_by_cpu(self.regs.sp);
@@ -265,31 +287,165 @@ impl Cpu {
     fn exec(&mut self, instruction: &Instruction, addressing: &Addressing, operand: u16) {
         match instruction {
             Instruction::ADC => {
-                //let result = operand as i16 + self.regs.a as i16 + self.regs.p.carry as i16;
+                let sign_bit_a = self.regs.a >> 7;
+                match addressing {
+                    Addressing::Immediate => {
+                        let sign_bit_op = (operand as u8) >> 7;
+                        self.regs.a += operand as u8 + if self.regs.p.carry {1} else {0};
+                        let result_bit = self.regs.a >> 7;
+                        self.regs.p.overflow = if sign_bit_a == sign_bit_op {
+                            if sign_bit_a != result_bit {
+                                self.regs.p.carry = true;
+                                true
+                            } else {false}
+                        } else {false};
+                    },
+                    _ => {
+                        let data = self.read(operand, ReadSize::Byte) as u8;
+                        let sign_bit_data = data >> 7;
+                        self.regs.a += data + if self.regs.p.carry {1} else {0};
+                        let result_bit = self.regs.a >> 7;
+                        self.regs.p.overflow = if sign_bit_a == sign_bit_data{
+                            if sign_bit_a != result_bit {
+                                self.regs.p.carry = true;
+                                true
+                            } else {false}
+                        } else {false};
+                    }
+                }
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
+                self.regs.p.zero = self.regs.a == 0;
                 println!("ADC");
             },
             Instruction::SBC => {
+                let sign_bit_a = self.regs.a >> 7;
+                match addressing {
+                    Addressing::Immediate => {
+                        let sign_bit_op = operand as u8 >> 7;
+                        self.regs.a -= operand as u8 + if self.regs.p.carry {0} else {1};
+                        let result_bit = self.regs.a >> 7;
+                        self.regs.p.overflow = if sign_bit_a != sign_bit_op {
+                            if sign_bit_a != result_bit {
+                                self.regs.p.carry = true;
+                                true
+                            } else {false}
+                        } else {false}
+                    },
+                    _ => {
+                        let data = self.read(operand, ReadSize::Byte) as u8;
+                        let sign_bit_data = data >> 7;
+                        self.regs.a -= data + if self.regs.p.carry {1} else {0};
+                        let result_bit = self.regs.a >> 7;
+                        self.regs.p.overflow = if sign_bit_a != sign_bit_data {
+                            if sign_bit_a != result_bit {
+                                self.regs.p.carry = true;
+                                true
+                            } else {false}
+                        } else {false};
+                    }
+                }
                 print!("SBC");
             },
             Instruction::AND => { 
+                match addressing {
+                    Addressing::Immediate => {
+                        self.regs.a &= operand as u8;
+                    },
+                    _ => {
+                        let data = self.read(operand, ReadSize::Byte) as u8;
+                        self.regs.a &= data;
+                    }
+                }
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
+                self.regs.p.zero = self.regs.a == 0;
                 print!("AND ");
             },
             Instruction::ORA => {
+                match addressing {
+                    Addressing::Immediate => {
+                        self.regs.a |= operand as u8;
+                    },
+                    _ => {
+                        let data = self.read(operand, ReadSize::Byte) as u8;
+                        self.regs.a |= data;
+                    }
+                }
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
+                self.regs.p.zero = self.regs.a == 0;
                 print!("ORA ");
             },
             Instruction::EOR => {
+                match addressing {
+                    Addressing::Immediate => {
+                        self.regs.a ^= operand as u8;
+                    },
+                    _ => {
+                        let data = self.read(operand, ReadSize::Byte) as u8;
+                        self.regs.a ^= data;
+                    }
+                }
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
+                self.regs.p.zero = self.regs.a == 0;
                 print!("EOR");
             },
             Instruction::ASL => {
+                match addressing {
+                    Addressing::Accumlator => {
+                        self.regs.p.carry = (self.regs.a & (1 << 7)) != 0;
+                        self.regs.a <<= 1;
+                    },
+                    _ => {
+                        self.regs.p.carry = (self.regs.a & (1 << 7)) != 0;
+                        self.regs.a = (operand as u8) << 1;
+                    }
+                }
+                self.regs.p.zero = self.regs.a == 0;
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
                 print!("ASL");
             },
             Instruction::LSR => {
+                match addressing {
+                    Addressing::Accumlator => {
+                        self.regs.p.carry = (self.regs.a & 1) != 0;
+                        self.regs.a >>= 1;
+                    },
+                    _ => {
+                        self.regs.p.carry = (self.regs.a & 1) != 0;
+                        self.regs.a = (operand as u8) >> 1 ;
+                    }
+                }
+                self.regs.p.zero = self.regs.a == 0;
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
                 print!("LSR");
             },
             Instruction::ROL => {
+                match addressing {
+                    Addressing::Accumlator => {
+                        self.regs.p.carry = (self.regs.a & (1 << 7)) != 0;
+                        self.regs.a = self.regs.a.rotate_left(1) as u8;
+                    }
+                    _ => {
+                        self.regs.p.carry = (self.regs.a & (1 << 7)) != 0;
+                        self.regs.a = operand.rotate_left(1) as u8;
+                    }
+                }
+                self.regs.p.zero = self.regs.a == 0;
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
                 print!("ROL");
             },
             Instruction::ROR => {
+                match addressing {
+                    Addressing::Accumlator => {
+                        self.regs.p.carry = (self.regs.a & 1) != 0;
+                        self.regs.a = self.regs.a.rotate_right(1) as u8;
+                    }
+                    _ => {
+                        self.regs.p.carry = (operand & 1) != 0;
+                        self.regs.a = operand.rotate_right(1) as u8;
+                    }
+                }
+                self.regs.p.zero = self.regs.a == 0;
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
                 print!("ROR");
             },
             Instruction::BCC => {
@@ -371,9 +527,23 @@ impl Cpu {
                 print!("RTS");
             },
             Instruction::BRK => {
+                let interrupt = self.regs.p.interrupt;
+                if !interrupt {
+                    self.regs.p.break_mode = true;
+                    self.regs.pc += 1;
+                    self.push(((self.regs.pc & 0xFF00) >> 4) as u8);
+                    self.push((self.regs.pc & 0xFF) as u8);
+                    self.push_status();
+                    self.regs.p.interrupt = true;
+                    self.regs.pc = self.read(0xFFFE, ReadSize::Word);
+                } else {return;}
                 print!("BRK");
             },
             Instruction::RTI => {
+                self.pop_status();
+                let lower = self.pop();
+                let upper = self.pop();
+                self.regs.pc = (((upper as u8) << 4) | lower) as u16;
                 print!("RTI");
             },
             Instruction::CMP => {
@@ -407,23 +577,43 @@ impl Cpu {
                 print!("CPY");
             },
             Instruction::INC => {
+                let data = self.read(operand, ReadSize::Byte);
+                let result = data as u8 + 1;
+                self.bus.write_by_cpu(operand, result);
+                self.regs.p.zero = result == 0;
+                self.regs.p.negative = (result & (1 << 7)) != 0;
                 print!("INC");
             },
             Instruction::DEC => {
+                let data = self.read(operand, ReadSize::Byte);
+                let result = data as u8 - 1;
+                self.bus.write_by_cpu(operand, result);
+                self.regs.p.zero = result == 0;
+                self.regs.p.negative = (result & (1 << 7)) != 0;
                 print!("DEC");
             },
             Instruction::INX => {
+                self.regs.x += 1;
+                self.regs.p.zero = self.regs.x == 0;
+                self.regs.p.negative = (self.regs.x & (1 << 7)) != 0;
                 print!("INX");
             },
             Instruction::DEX => {
+                self.regs.x -= 1;
+                self.regs.p.zero = self.regs.x == 0;
+                self.regs.p.negative = (self.regs.x & (1 << 7)) != 0;
                 print!("DEX");
             },
             Instruction::INY => {
+                self.regs.y += 1;
+                self.regs.p.zero = self.regs.y == 0;
+                self.regs.p.negative = (self.regs.y & (1 << 7)) != 0;
                 print!("INY");
             },
             Instruction::DEY => {
-                let mut y = self.regs.y as i8;
-                y -= 1;
+                self.regs.y -= 1;
+                self.regs.p.zero = self.regs.y == 0;
+                self.regs.p.negative = (self.regs.y & (1 << 7)) != 0;
                 print!("DEY");
             },
             Instruction::CLC => {
@@ -455,7 +645,6 @@ impl Cpu {
                 print!("CLV false -> p.overflow");
             },
             Instruction::LDA => {
-                //self.regs.a = operand as u8;
                 self.regs.a = match addressing {
                     Addressing::Immediate => {operand as u8},
                     _ => {
@@ -463,17 +652,33 @@ impl Cpu {
                     }
                 };
                 self.regs.p.zero = self.regs.a == 0;
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
                 print!("LDA: {:x} -> A:{:x}", operand, self.regs.a);
             },
             Instruction::LDX => {
-                self.regs.x = operand as u8;
+                self.regs.x = match addressing {
+                    Addressing::Immediate => {operand as u8},
+                    _ => {
+                        self.read(operand, ReadSize::Byte) as u8
+                    }
+                };
+                self.regs.p.zero = self.regs.x == 0;
+                self.regs.p.negative = (self.regs.x & (1 << 7)) != 0;
                 print!("LDX: X {}", self.regs.x);
             },
             Instruction::LDY => {
+                self.regs.y = match addressing {
+                    Addressing::Immediate => {operand as u8},
+                    _ => {
+                        self.read(operand, ReadSize::Byte) as u8
+                    }
+                };
+                self.regs.p.zero = self.regs.y == 0;
+                self.regs.p.negative = (self.regs.y & (1 << 7)) != 0;
                 print!("LDY");
             },
             Instruction::STA => {
-                self.bus.write_by_cpu(operand, self.regs.x);
+                self.bus.write_by_cpu(operand, self.regs.a);
                 print!("STA a:{:x} -> {:x}", self.regs.a, operand);
             },
             Instruction::STX => {
@@ -485,15 +690,27 @@ impl Cpu {
                 print!("STY y:{:x} -> {:x}", self.regs.y, operand);
             },
             Instruction::TAX => {
+                self.regs.x = self.regs.a;
+                self.regs.p.zero = self.regs.x == 0;
+                self.regs.p.negative = (self.regs.x & (1 << 7)) != 0;
                 print!("TAX");
             },
             Instruction::TXA => {
+                self.regs.a = self.regs.x;
+                self.regs.p.zero = self.regs.a == 0;
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
                 print!("TXA");
             },
             Instruction::TAY => {
+                self.regs.y = self.regs.a;
+                self.regs.p.zero = self.regs.y == 0;
+                self.regs.p.negative = (self.regs.y & (1 << 7)) != 0;
                 print!("TAY");
             },
             Instruction::TYA => {
+                self.regs.a = self.regs.y;
+                self.regs.p.zero = self.regs.a == 0;
+                self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
                 print!("TYA");
             },
             Instruction::TSX => {
@@ -518,9 +735,11 @@ impl Cpu {
                 print!("PLA stack:{:x} -> A:{:x}", self.regs.sp, self.regs.a);
             },
             Instruction::PHP => {
+                self.push_status();
                 print!("PHP");
             },
             Instruction::PLP => {
+                self.pop_status();
                 print!("PLP");
             },
             Instruction::NOP => {
@@ -532,7 +751,7 @@ impl Cpu {
 
     pub fn run(&mut self) {
         let opcode = self.fetch();
-        if self.regs.pc < 0x8080 {
+        //if self.regs.pc < 0x8080 {
             let op_info = self.get_instruction_info(opcode);
             //println!(
             //    "{:x} {:x} {}",
@@ -543,7 +762,7 @@ impl Cpu {
             let operand = self.fetch_operand(&op_info.1);
             self.exec(&op_info.0, &op_info.1, operand);
             println!(" opcode {:x} operand {:x}", opcode, operand);
-        }
+        //}
     }
 
     fn get_instruction_info(&self, opcode: u16) -> (Instruction, Addressing, u8) {
