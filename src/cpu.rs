@@ -183,27 +183,27 @@ impl Cpu {
         self.bus.write_by_cpu(self.regs.sp, data);
         self.regs.sp += 1;
     }
-    
+
     fn push_status(&mut self) {
-        self.push(if self.regs.p.negative {1} else {0});
-        self.push(if self.regs.p.overflow {1} else {0});
+        self.push(if self.regs.p.negative { 1 } else { 0 });
+        self.push(if self.regs.p.overflow { 1 } else { 0 });
         self.push(1);
-        self.push(if self.regs.p.break_mode {1} else {0});
-        self.push(if self.regs.p.decimal {1} else {0});
-        self.push(if self.regs.p.interrupt {1} else {0});
-        self.push(if self.regs.p.zero {1} else {0});
-        self.push(if self.regs.p.negative {1} else {0});
+        self.push(if self.regs.p.break_mode { 1 } else { 0 });
+        self.push(if self.regs.p.decimal { 1 } else { 0 });
+        self.push(if self.regs.p.interrupt { 1 } else { 0 });
+        self.push(if self.regs.p.zero { 1 } else { 0 });
+        self.push(if self.regs.p.negative { 1 } else { 0 });
     }
 
     fn pop_status(&mut self) {
-        self.regs.p.negative = if self.pop() == 0 {false} else {true};
-        self.regs.p.overflow = if self.pop() == 0 {false} else {true};
+        self.regs.p.negative = if self.pop() == 0 { false } else { true };
+        self.regs.p.overflow = if self.pop() == 0 { false } else { true };
         self.regs.p.reserved = self.pop() == 1;
-        self.regs.p.break_mode = if self.pop() == 0 {false} else {true};
-        self.regs.p.decimal = if self.pop() == 0 {false} else {true};
-        self.regs.p.interrupt= if self.pop() == 0 {false} else {true};
-        self.regs.p.zero = if self.pop() == 0 {false} else {true};
-        self.regs.p.negative = if self.pop() == 0 {false} else {true};
+        self.regs.p.break_mode = if self.pop() == 0 { false } else { true };
+        self.regs.p.decimal = if self.pop() == 0 { false } else { true };
+        self.regs.p.interrupt = if self.pop() == 0 { false } else { true };
+        self.regs.p.zero = if self.pop() == 0 { false } else { true };
+        self.regs.p.negative = if self.pop() == 0 { false } else { true };
     }
 
     fn pop(&mut self) -> u8 {
@@ -290,26 +290,34 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = (operand as u8) >> 7;
-                        self.regs.a += operand as u8 + if self.regs.p.carry {1} else {0};
+                        self.regs.a += operand as u8 + if self.regs.p.carry { 1 } else { 0 };
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a == sign_bit_op {
                             if sign_bit_a != result_bit {
                                 self.regs.p.carry = true;
                                 true
-                            } else {false}
-                        } else {false};
-                    },
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        };
+                    }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         let sign_bit_data = data >> 7;
-                        self.regs.a += data + if self.regs.p.carry {1} else {0};
+                        self.regs.a += data + if self.regs.p.carry { 1 } else { 0 };
                         let result_bit = self.regs.a >> 7;
-                        self.regs.p.overflow = if sign_bit_a == sign_bit_data{
+                        self.regs.p.overflow = if sign_bit_a == sign_bit_data {
                             if sign_bit_a != result_bit {
                                 self.regs.p.carry = true;
                                 true
-                            } else {false}
-                        } else {false};
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        };
                     }
                 }
                 self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
@@ -321,35 +329,43 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = operand as u8 >> 7;
-                        self.regs.a -= operand as u8 + if self.regs.p.carry {0} else {1};
+                        self.regs.a -= operand as u8 + if self.regs.p.carry { 0 } else { 1 };
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_op {
                             if sign_bit_a != result_bit {
                                 self.regs.p.carry = true;
                                 true
-                            } else {false}
-                        } else {false}
-                    },
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         let sign_bit_data = data >> 7;
-                        self.regs.a -= data + if self.regs.p.carry {1} else {0};
+                        self.regs.a -= data + if self.regs.p.carry { 1 } else { 0 };
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_data {
                             if sign_bit_a != result_bit {
                                 self.regs.p.carry = true;
                                 true
-                            } else {false}
-                        } else {false};
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        };
                     }
                 }
                 print!("SBC");
-            },
-            Instruction::AND => { 
+            }
+            Instruction::AND => {
                 match addressing {
                     Addressing::Immediate => {
                         self.regs.a &= operand as u8;
-                    },
+                    }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         self.regs.a &= data;
@@ -363,7 +379,7 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         self.regs.a |= operand as u8;
-                    },
+                    }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         self.regs.a |= data;
@@ -377,7 +393,7 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         self.regs.a ^= operand as u8;
-                    },
+                    }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         self.regs.a ^= data;
@@ -392,7 +408,7 @@ impl Cpu {
                     Addressing::Accumlator => {
                         self.regs.p.carry = (self.regs.a & (1 << 7)) != 0;
                         self.regs.a <<= 1;
-                    },
+                    }
                     _ => {
                         self.regs.p.carry = (self.regs.a & (1 << 7)) != 0;
                         self.regs.a = (operand as u8) << 1;
@@ -407,10 +423,10 @@ impl Cpu {
                     Addressing::Accumlator => {
                         self.regs.p.carry = (self.regs.a & 1) != 0;
                         self.regs.a >>= 1;
-                    },
+                    }
                     _ => {
                         self.regs.p.carry = (self.regs.a & 1) != 0;
-                        self.regs.a = (operand as u8) >> 1 ;
+                        self.regs.a = (operand as u8) >> 1;
                     }
                 }
                 self.regs.p.zero = self.regs.a == 0;
@@ -453,64 +469,80 @@ impl Cpu {
                 self.regs.pc = if !self.regs.p.carry {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BCS => {
                 print!("BCS ");
                 self.regs.pc = if self.regs.p.carry {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BEQ => {
                 print!("BEQ ");
                 self.regs.pc = if self.regs.p.zero {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BNE => {
                 print!("BNE ");
                 self.regs.pc = if !self.regs.p.zero {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BVC => {
                 print!("BVC ");
                 self.regs.pc = if !self.regs.p.overflow {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BVS => {
                 print!("BVS ");
                 self.regs.pc = if self.regs.p.overflow {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BPL => {
                 print!("BPL ");
                 self.regs.pc = if !self.regs.p.negative {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BMI => {
                 print!("BMI ");
                 self.regs.pc = if self.regs.p.negative {
                     print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
-                } else {self.regs.pc};
-            },
+                } else {
+                    self.regs.pc
+                };
+            }
             Instruction::BIT => {
                 let result = self.regs.a as u16 & operand;
                 self.regs.p.zero = result == 0;
                 self.regs.p.negative = result & (1 << 7) == 0b1000_0000;
                 self.regs.p.overflow = result & (1 << 6) == 0b0100_0000;
                 print!("BIT ");
-            },
+            }
             Instruction::JMP => {
                 self.regs.pc = operand;
                 print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
@@ -535,7 +567,9 @@ impl Cpu {
                     self.push_status();
                     self.regs.p.interrupt = true;
                     self.regs.pc = self.read(0xFFFE, ReadSize::Word);
-                } else {return;}
+                } else {
+                    return;
+                }
                 print!("BRK");
             }
             Instruction::RTI => {
@@ -547,8 +581,8 @@ impl Cpu {
             }
             Instruction::CMP => {
                 let m = match addressing {
-                    Addressing::Immediate => {operand},
-                    _ => {self.read(operand, ReadSize::Byte)}
+                    Addressing::Immediate => operand,
+                    _ => self.read(operand, ReadSize::Byte),
                 };
                 self.regs.p.carry = self.regs.a >= m as u8;
                 self.regs.p.zero = self.regs.a == m as u8;
@@ -557,8 +591,8 @@ impl Cpu {
             }
             Instruction::CPX => {
                 let m = match addressing {
-                    Addressing::Immediate => {operand},
-                    _ => {self.read(operand, ReadSize::Byte)}
+                    Addressing::Immediate => operand,
+                    _ => self.read(operand, ReadSize::Byte),
                 };
                 self.regs.p.carry = self.regs.x >= m as u8;
                 self.regs.p.zero = self.regs.x == m as u8;
@@ -567,8 +601,8 @@ impl Cpu {
             }
             Instruction::CPY => {
                 let m = match addressing {
-                    Addressing::Immediate => {operand},
-                    _ => {self.read(operand, ReadSize::Byte)}
+                    Addressing::Immediate => operand,
+                    _ => self.read(operand, ReadSize::Byte),
                 };
                 self.regs.p.carry = self.regs.y >= m as u8;
                 self.regs.p.zero = self.regs.y == m as u8;
@@ -654,10 +688,8 @@ impl Cpu {
             }
             Instruction::LDX => {
                 self.regs.x = match addressing {
-                    Addressing::Immediate => {operand as u8},
-                    _ => {
-                        self.read(operand, ReadSize::Byte) as u8
-                    }
+                    Addressing::Immediate => operand as u8,
+                    _ => self.read(operand, ReadSize::Byte) as u8,
                 };
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = (self.regs.x & (1 << 7)) != 0;
@@ -665,10 +697,8 @@ impl Cpu {
             }
             Instruction::LDY => {
                 self.regs.y = match addressing {
-                    Addressing::Immediate => {operand as u8},
-                    _ => {
-                        self.read(operand, ReadSize::Byte) as u8
-                    }
+                    Addressing::Immediate => operand as u8,
+                    _ => self.read(operand, ReadSize::Byte) as u8,
                 };
                 self.regs.p.zero = self.regs.y == 0;
                 self.regs.p.negative = (self.regs.y & (1 << 7)) != 0;
@@ -749,16 +779,16 @@ impl Cpu {
     pub fn run(&mut self) {
         let opcode = self.fetch();
         //if self.regs.pc < 0x8080 {
-            let op_info = self.get_instruction_info(opcode);
-            //println!(
-            //    "{:x} {:x} {}",
-            //    opcode,
-            //    op_info.2,
-            //    if op_info.2 == 0 { "unknown" } else { "" }
-            //);
-            let operand = self.fetch_operand(&op_info.1);
-            self.exec(&op_info.0, &op_info.1, operand);
-            println!(" opcode {:x} operand {:x}", opcode, operand);
+        let op_info = self.get_instruction_info(opcode);
+        //println!(
+        //    "{:x} {:x} {}",
+        //    opcode,
+        //    op_info.2,
+        //    if op_info.2 == 0 { "unknown" } else { "" }
+        //);
+        let operand = self.fetch_operand(&op_info.1);
+        self.exec(&op_info.0, &op_info.1, operand);
+        println!(" opcode {:x} operand {:x}", opcode, operand);
         //}
     }
 
