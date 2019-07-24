@@ -1,18 +1,21 @@
 use crate::rom;
 use crate::wram;
+use crate::ppu;
 
 pub struct CpuBus {
     wram: wram::Wram,
     prog_rom: rom::ProgramRom,
     chr_rom: rom::CharacterRom,
+    ppu: ppu::Ppu
 }
 
 impl CpuBus {
-    pub fn new(wram: wram::Wram, prog_rom: rom::ProgramRom, chr_rom: rom::CharacterRom) -> CpuBus {
+    pub fn new(wram: wram::Wram, prog_rom: rom::ProgramRom, chr_rom: rom::CharacterRom, ppu: ppu::Ppu) -> CpuBus {
         CpuBus {
             wram,
             prog_rom,
             chr_rom,
+            ppu,
         }
     }
 
@@ -51,5 +54,18 @@ impl CpuBus {
         }
     }
 
-    pub fn write_by_cpu(&self, addr: u16, data: u8) {}
+    pub fn write_by_cpu(&mut self, addr: u16, data: u8) {
+        if addr < 0x800 {
+            self.wram.write(addr, data);
+        } else if addr < 0x2000 {
+            self.wram.write(addr - 0x800, data);
+        } else if addr < 0x2008 {
+            self.ppu.write(addr - 0x2000, data);
+        } else if addr < 0x4020 && addr >= 0x4000 {
+            //0x4014 -> dma
+            //0x4016 -> joypad1
+            //0x4017 -> joypad2
+            //others -> apu
+        }
+    }
 }
