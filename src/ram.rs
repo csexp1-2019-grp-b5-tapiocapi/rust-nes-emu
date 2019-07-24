@@ -1,10 +1,10 @@
-pub struct Wram {
+pub struct Ram {
     pub ram: Vec<u8>,
 }
 
-impl Wram {
-    pub fn new(size: usize) -> Wram {
-        Wram { ram: vec![0; size] }
+impl Ram {
+    pub fn new(size: usize) -> Self {
+        Self { ram: vec![0; size] }
     }
 
     pub fn reset(&mut self) {

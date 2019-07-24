@@ -1,21 +1,18 @@
 use crate::rom;
-use crate::wram;
-use crate::ppu;
+use crate::ram;
 
 pub struct CpuBus {
-    wram: wram::Wram,
+    wram: ram::Ram,
     prog_rom: rom::ProgramRom,
     chr_rom: rom::CharacterRom,
-    ppu: ppu::Ppu
 }
 
 impl CpuBus {
-    pub fn new(wram: wram::Wram, prog_rom: rom::ProgramRom, chr_rom: rom::CharacterRom, ppu: ppu::Ppu) -> CpuBus {
+    pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom, chr_rom: rom::CharacterRom) -> CpuBus {
         CpuBus {
             wram,
             prog_rom,
             chr_rom,
-            ppu,
         }
     }
 
