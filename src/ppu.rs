@@ -1,5 +1,5 @@
 use crate::rom::CharacterRom;
-use crate::wram::Wram;
+use crate::ram::Ram;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Sprite {
@@ -24,14 +24,14 @@ impl Sprite {
 
 pub struct Ppu {
     sprites: Vec<Sprite>,
-    vram: Wram,
+    vram: Ram,
 }
 
 impl Ppu {
     pub fn new(chr_rom: &CharacterRom) -> Ppu {
         Ppu {
             sprites: chr_rom.data.chunks(16).map(Sprite::new).collect(),
-            vram: Wram::new(0x4000),
+            vram: Ram::new(0x4000),
         }
     }
 
@@ -97,7 +97,8 @@ fn sprite_test() {
     use crate::rom;
     use opencv::prelude::*;
 
-    let buffer = std::fs::read("sample1/sample1.nes").unwrap();
+    //let buffer = std::fs::read("sample1/sample1.nes").unwrap();
+    let buffer = std::fs::read("/home/devm33/Documents/fc3_full_win32_20190611/fc3_full_win32_20190611/marioBros3.nes").unwrap();
 
     let (_, chr_rom) = rom::load(buffer);
     let ppu = Ppu::new(&chr_rom);

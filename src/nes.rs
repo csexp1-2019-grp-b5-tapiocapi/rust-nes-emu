@@ -1,7 +1,7 @@
 use crate::cpu::Cpu;
 use crate::cpu_bus::CpuBus;
 use crate::rom;
-use crate::wram::Wram;
+use crate::ram::Ram;
 
 use std::io;
 use std::path::Path;
@@ -15,7 +15,7 @@ impl Nes {
         let buffer = std::fs::read(file_path.as_ref())?;
 
         let (prog, chr) = rom::load(buffer);
-        let wram = Wram::new(2048);
+        let wram = Ram::new(2048);
 
         let cpu_bus = CpuBus::new(wram, prog, chr);
 
