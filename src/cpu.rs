@@ -290,7 +290,7 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = (operand as u8) >> 7;
-                        self.regs.a += operand as u8 + if self.regs.p.carry { 1 } else { 0 };
+                        self.regs.a += operand as u8 + if self.regs.p.carry {1} else {0};
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a == sign_bit_op {
                             if sign_bit_a != result_bit {
@@ -329,23 +329,19 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = operand as u8 >> 7;
-                        self.regs.a -= operand as u8 + if self.regs.p.carry { 0 } else { 1 };
+                        self.regs.a -= operand as u8 + if self.regs.p.carry {0} else {1};
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_op {
                             if sign_bit_a != result_bit {
                                 self.regs.p.carry = true;
                                 true
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    }
+                            } else {false}
+                        } else {false}
+                    },
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         let sign_bit_data = data >> 7;
-                        self.regs.a -= data + if self.regs.p.carry { 1 } else { 0 };
+                        self.regs.a -= data + if self.regs.p.carry {1} else {0};
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_data {
                             if sign_bit_a != result_bit {
@@ -560,6 +556,16 @@ impl Cpu {
                 print!("RTS");
             }
             Instruction::BRK => {
+                let interrupt = self.regs.p.interrupt;
+                if !interrupt {
+                    self.regs.p.break_mode = true;
+                    self.regs.pc += 1;
+                    self.push(((self.regs.pc & 0xFF00) >> 4) as u8);
+                    self.push((self.regs.pc & 0xFF) as u8);
+                    self.push_status();
+                    self.regs.p.interrupt = true;
+                    self.regs.pc = self.read(0xFFFE, ReadSize::Word);
+                } else {return;}
                 print!("BRK");
                 let interrupt = self.regs.p.interrupt;
                 if !interrupt {
