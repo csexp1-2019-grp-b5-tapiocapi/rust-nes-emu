@@ -21,6 +21,7 @@ impl Sprite {
     }
 }
 
+
 pub struct Ppu {
     sprites: Vec<Sprite>,
     vram: Wram,
@@ -30,7 +31,7 @@ impl Ppu {
     pub fn new(chr_rom: &CharacterRom) -> Ppu {
         Ppu {
             sprites: chr_rom.data.chunks(16).map(Sprite::new).collect(),
-            vram: Wram::new(2048),
+            vram: Wram::new(0x4000),
         }
     }
 
@@ -140,7 +141,7 @@ fn sprite_test() {
             )
             .unwrap();
 
-            println!("({}, {}) {}x{}", j * length, i * length, length, length);
+            //println!("({}, {}) {}x{}", j * length, i * length, length, length);
             let mut roi = opencv::core::Mat::roi(
                 &sprites_img,
                 opencv::core::Rect::new(j * length, i * length, length, length),
@@ -150,7 +151,7 @@ fn sprite_test() {
         }
     }
 
-    opencv::highgui::imshow(title, &sprites_img);
+    opencv::highgui::imshow(title, &sprites_img).unwrap();
     opencv::highgui::wait_key(0).unwrap();
 
     opencv::imgcodecs::imwrite("./sprites.png", &sprites_img, &Vector::new()).unwrap();
