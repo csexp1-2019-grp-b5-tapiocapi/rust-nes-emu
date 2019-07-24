@@ -57,7 +57,7 @@ impl CpuBus {
         } else if addr < 0x2000 {
             self.wram.write(addr - 0x800, data);
         } else if addr < 0x2008 {
-            self.ppu.write(addr - 0x2000, data);
+            //self.ppu.write(addr - 0x2000, data);
         } else if addr < 0x4020 && addr >= 0x4000 {
             //0x4014 -> dma
             //0x4016 -> joypad1
