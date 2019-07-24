@@ -181,7 +181,7 @@ impl Cpu {
     }
     fn push(&mut self, data: u8) {
         self.bus.write_by_cpu(self.regs.sp, data);
-        self.regs.sp += 1;
+        self.regs.sp -= 1;
     }
 
     fn push_status(&mut self) {
@@ -208,7 +208,7 @@ impl Cpu {
 
     fn pop(&mut self) -> u8 {
         let data = self.bus.read_by_cpu(self.regs.sp);
-        self.regs.sp -= 1;
+        self.regs.sp += 1;
         data
     }
 
@@ -548,6 +548,8 @@ impl Cpu {
                 print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
             }
             Instruction::JSR => {
+                self.push((self.regs.pc & 0xFF00) as u8);
+                self.push((self.regs.pc & 0xFF) as u8);
                 self.regs.pc = operand;
                 print!("JSR");
             }
@@ -558,6 +560,7 @@ impl Cpu {
                 print!("RTS");
             }
             Instruction::BRK => {
+                print!("BRK");
                 let interrupt = self.regs.p.interrupt;
                 if !interrupt {
                     self.regs.p.break_mode = true;
@@ -570,7 +573,6 @@ impl Cpu {
                 } else {
                     return;
                 }
-                print!("BRK");
             }
             Instruction::RTI => {
                 self.pop_status();
@@ -744,7 +746,7 @@ impl Cpu {
                 self.regs.x = self.regs.sp as u8;
                 self.regs.p.negative = false;
                 self.regs.p.zero = self.regs.x == 0;
-                print!("TXS: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
+                print!("TSX: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
             }
             Instruction::TXS => {
                 self.regs.sp = (self.regs.x as u16) | 0x0100;
