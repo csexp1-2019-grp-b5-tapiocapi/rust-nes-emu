@@ -220,61 +220,40 @@ impl Cpu {
         data
     }
 
+    fn fetch_addr(&mut self) -> u16 {
+                let lower_byte = self.fetch();
+                let upper_byte = self.fetch();
+                ((upper_byte as u16) << 4) & lower_byte
+    }
     fn fetch_operand(&mut self, addressing: &Addressing) -> u16 {
         match addressing {
             Addressing::Accumlator => 0,
             Addressing::Immediate => self.fetch(),
-            Addressing::Absolute => {
-                let lower_bit = self.fetch();
-                let upper_bit = self.fetch();
-                let mut bit = (upper_bit as u16) << 8;
-                bit |= lower_bit as u16;
-                bit
-            }
+            Addressing::Absolute => self.fetch_addr(),
             Addressing::ZeroPage => self.fetch() as u16,
             Addressing::ZeroPageX => (self.fetch() as u16 + self.regs.x as u16) & 0xFF,
-            Addressing::ZeroPageY => {
-                //?
-                (self.fetch() as u16 + self.regs.y as u16 & 0xFF)
-            }
-            Addressing::AbsoluteX => {
-                let lower_bit = self.fetch();
-                let upper_bit = self.fetch();
-                let mut bit = (upper_bit as u16) << 8;
-                bit |= lower_bit as u16;
-                bit + self.regs.x as u16
-            }
-            Addressing::AbsoluteY => {
-                let lower_bit = self.fetch();
-                let upper_bit = self.fetch();
-                let mut bit = (upper_bit as u16) << 8;
-                bit |= lower_bit as u16;
-                (bit + self.regs.y as u16)
-            }
+            Addressing::ZeroPageY => (self.fetch() as u16 + self.regs.y as u16) & 0xFF,
+            Addressing::AbsoluteX => self.fetch_addr() + self.regs.x as u16,
+            Addressing::AbsoluteY => self.fetch_addr() + self.regs.y as u16,
             Addressing::Implied => 0,
             Addressing::Relative => {
                 let addr = self.regs.pc;
-                let offset = self.fetch() as u16;
-                addr + offset
+                let offset = self.fetch() as i16;
+                (addr as i16 + offset) as u16
             }
             Addressing::Indirect => {
-                let lower_byte = self.fetch();
-                let upper_byte = self.fetch();
-                let mut byte = (upper_byte as u16) << 8;
-                byte |= lower_byte as u16;
-                self.read(byte, ReadSize::Word)
+                let addr = self.fetch_addr();
+                self.read(addr, ReadSize::Word)
             }
             Addressing::IndirectX => {
-                let mut lower = self.fetch() as u16;
-                lower += self.regs.x as u16;
-                lower &= 0x00FF;
-                self.read(lower, ReadSize::Word)
+                let addr = (self.fetch() as u16 + self.regs.x as u16) & 0xFF;
+                self.read(addr, ReadSize::Word)
             }
             Addressing::IndirectY => {
-                let mut lower = self.fetch() as u16;
-                lower += self.regs.y as u16;
-                lower &= 0x00FF;
-                self.read(lower, ReadSize::Word)
+                let addr = (self.fetch() as u16) & 0xFF;
+                let upper_byte = self.read(addr, ReadSize::Byte);
+                let lower_byte = self.read(addr + 1, ReadSize::Byte);
+                (upper_byte << 8) & lower_byte + self.regs.y as u16
             }
             Addressing::Unknown => {
                 println!("Unknown Addressing mode");
