@@ -34,23 +34,6 @@ impl Ppu {
         }
     }
 
-    pub fn show(sprite: &Sprite) {
-        for row in &sprite.data {
-            for pixel in row {
-                print!("{}", if *pixel > 0 { "." } else { " " });
-            }
-            println!();
-        }
-    }
-
-    pub fn show_all(&self) {
-        for sprite in &self.sprites {
-            Ppu::show(sprite);
-            println!();
-            println!();
-        }
-    }
-
     pub fn read(&self, addr: u16) -> u8 {
         match addr {
             2 => {
@@ -111,17 +94,67 @@ impl Ppu {
 #[test]
 fn sprite_test() {
     use crate::rom;
+    use opencv::prelude::*;
 
     let buffer = std::fs::read("sample1/sample1.nes").unwrap();
-    //let buffer = std::fs::read("/home/devm33/Documents/fc3_full_win32_20190611/fc3_full_win32_20190611/marioBros3.nes").unwrap();
 
     let (_, chr_rom) = rom::load(buffer);
     let ppu = Ppu::new(&chr_rom);
 
     println!("chr rom size: {}", chr_rom.data.len());
-    //ppu.show_all();
 
     let title = "Sprite";
+
+    let count = 100i32;
+    let length = 24;
+
+    let sprites_img =
+        unsafe { opencv::core::Mat::new_rows_cols(length * count, length * count, opencv::core::CV_8UC1).unwrap() };
+
+
+    'outer: for i in 0..count {
+        for j in 0..count {
+            let index = (j + i * count) as usize;
+            if index >= ppu.sprites.len() {
+                break 'outer;
+            }
+
+            let sprite = ppu.sprites[index];
+
+            let mut img =
+                unsafe { opencv::core::Mat::new_rows_cols(8, 8, opencv::core::CV_8UC1).unwrap() };
+            for l in 0..8 {
+                for m in 0..8 {
+                    *img.at_2d_mut(l, m).unwrap() = sprite.data[l as usize][m as usize] * 63;
+                }
+            }
+
+            let mut scaled = opencv::core::Mat::new().unwrap();
+            opencv::imgproc::resize(
+                &img,
+                &mut scaled,
+                opencv::core::Size::new(length, length),
+                0.0,
+                0.0,
+                0,
+            )
+            .unwrap();
+
+            println!("({}, {}) {}x{}", j * length, i * length, length, length);
+            let mut roi = opencv::core::Mat::roi(
+                &sprites_img,
+                opencv::core::Rect::new(j * length, i * length, length, length),
+            )
+            .unwrap();
+            scaled.copy_to(&mut roi);
+        }
+    }
+
+    opencv::highgui::imshow(title, &sprites_img);
+    opencv::highgui::wait_key(0).unwrap();
+
+    opencv::imgcodecs::imwrite("./sprites.png", &sprites_img, &Vector::new()).unwrap();
+    /*
     for sprite in ppu.sprites {
         println!("Showing");
         let mut img =
@@ -136,7 +169,7 @@ fn sprite_test() {
         opencv::imgproc::resize(
             &img,
             &mut scaled,
-            opencv::core::Size::new(512, 512),
+            opencv::core::Size::new(32, 32),
             0.0,
             0.0,
             0,
@@ -144,5 +177,5 @@ fn sprite_test() {
 
         opencv::highgui::imshow(title, &scaled);
         opencv::highgui::wait_key(0).unwrap();
-    }
+    }*/
 }
