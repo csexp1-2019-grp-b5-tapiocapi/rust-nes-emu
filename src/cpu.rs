@@ -181,7 +181,7 @@ impl Cpu {
     }
     fn push(&mut self, data: u8) {
         self.bus.write_by_cpu(self.regs.sp, data);
-        self.regs.sp += 1;
+        self.regs.sp -= 1;
     }
 
     fn push_status(&mut self) {
@@ -208,7 +208,7 @@ impl Cpu {
 
     fn pop(&mut self) -> u8 {
         let data = self.bus.read_by_cpu(self.regs.sp);
-        self.regs.sp -= 1;
+        self.regs.sp += 1;
         data
     }
 
@@ -290,7 +290,7 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = (operand as u8) >> 7;
-                        self.regs.a += operand as u8 + if self.regs.p.carry { 1 } else { 0 };
+                        self.regs.a += operand as u8 + if self.regs.p.carry {1} else {0};
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a == sign_bit_op {
                             if sign_bit_a != result_bit {
@@ -329,23 +329,19 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = operand as u8 >> 7;
-                        self.regs.a -= operand as u8 + if self.regs.p.carry { 0 } else { 1 };
+                        self.regs.a -= operand as u8 + if self.regs.p.carry {0} else {1};
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_op {
                             if sign_bit_a != result_bit {
                                 self.regs.p.carry = true;
                                 true
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    }
+                            } else {false}
+                        } else {false}
+                    },
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         let sign_bit_data = data >> 7;
-                        self.regs.a -= data + if self.regs.p.carry { 1 } else { 0 };
+                        self.regs.a -= data + if self.regs.p.carry {1} else {0};
                         let result_bit = self.regs.a >> 7;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_data {
                             if sign_bit_a != result_bit {
@@ -548,6 +544,8 @@ impl Cpu {
                 print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
             }
             Instruction::JSR => {
+                self.push((self.regs.pc & 0xFF00) as u8);
+                self.push((self.regs.pc & 0xFF) as u8);
                 self.regs.pc = operand;
                 print!("JSR");
             }
@@ -567,10 +565,20 @@ impl Cpu {
                     self.push_status();
                     self.regs.p.interrupt = true;
                     self.regs.pc = self.read(0xFFFE, ReadSize::Word);
+                } else {return;}
+                print!("BRK");
+                let interrupt = self.regs.p.interrupt;
+                if !interrupt {
+                    self.regs.p.break_mode = true;
+                    self.regs.pc += 1;
+                    self.push(((self.regs.pc & 0xFF00) >> 4) as u8);
+                    self.push((self.regs.pc & 0xFF) as u8);
+                    self.push_status();
+                    self.regs.p.interrupt = true;
+                    self.regs.pc = self.read(0xFFFE, ReadSize::Word);
                 } else {
                     return;
                 }
-                print!("BRK");
             }
             Instruction::RTI => {
                 self.pop_status();
@@ -744,7 +752,7 @@ impl Cpu {
                 self.regs.x = self.regs.sp as u8;
                 self.regs.p.negative = false;
                 self.regs.p.zero = self.regs.x == 0;
-                print!("TXS: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
+                print!("TSX: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
             }
             Instruction::TXS => {
                 self.regs.sp = (self.regs.x as u16) | 0x0100;
