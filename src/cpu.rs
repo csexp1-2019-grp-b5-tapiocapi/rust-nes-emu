@@ -223,7 +223,7 @@ impl Cpu {
     fn fetch_addr(&mut self) -> u16 {
                 let lower_byte = self.fetch();
                 let upper_byte = self.fetch();
-                ((upper_byte as u16) << 4) & lower_byte
+                ((upper_byte as u16) << 8) & lower_byte
     }
     fn fetch_operand(&mut self, addressing: &Addressing) -> u16 {
         match addressing {
@@ -563,7 +563,7 @@ impl Cpu {
                 self.pop_status();
                 let lower = self.pop();
                 let upper = self.pop();
-                self.regs.pc = (((upper as u8) << 4) | lower) as u16;
+                self.regs.pc = (((upper as u8) << 8) | lower) as u16;
                 print!("RTI");
             }
             Instruction::CMP => {
