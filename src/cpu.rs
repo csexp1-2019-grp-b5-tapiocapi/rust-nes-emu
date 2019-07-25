@@ -215,15 +215,16 @@ impl Cpu {
     // fetch opcode (8-bit)
     fn fetch(&mut self) -> u16 {
         let data = self.read(self.regs.pc, ReadSize::Byte);
+        //println!("fetch 0x{:x} : {:x}", self.regs.pc, data);
         self.regs.pc += if self.regs.pc < 0xFFFF { 1 } else { 0 };
-        //println!("{:x}", self.regs.pc);
         data
     }
 
     fn fetch_addr(&mut self) -> u16 {
                 let lower_byte = self.fetch();
                 let upper_byte = self.fetch();
-                ((upper_byte as u16) << 8) & lower_byte
+                //println!("fetch {:x} {:x}", upper_byte, lower_byte);
+                ((upper_byte as u16) << 8) | lower_byte as u16
     }
     fn fetch_operand(&mut self, addressing: &Addressing) -> u16 {
         match addressing {
@@ -561,9 +562,9 @@ impl Cpu {
             }
             Instruction::RTI => {
                 self.pop_status();
-                let lower = self.pop();
-                let upper = self.pop();
-                self.regs.pc = (((upper as u8) << 8) | lower) as u16;
+                let lower = self.pop() as u16;
+                let upper = self.pop() as u16;
+                self.regs.pc = ((upper) << 8) | lower;
                 print!("RTI");
             }
             Instruction::CMP => {
@@ -613,10 +614,11 @@ impl Cpu {
                 print!("DEC");
             }
             Instruction::INX => {
+                print!("INX null\n : x:{:x}+1 ->", self.regs.x);
                 self.regs.x += 1;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = (self.regs.x & (1 << 7)) != 0;
-                print!("INX");
+                print!(" x:{:x}", self.regs.x);
             }
             Instruction::DEX => {
                 self.regs.x -= 1;
@@ -650,7 +652,8 @@ impl Cpu {
             }
             Instruction::SEI => {
                 self.regs.p.interrupt = true;
-                print!("SEI true -> p.interrupt");
+                println!("SEI null");
+                print!(" :true -> p.interrupt");
             }
             Instruction::CLD => {
                 self.regs.p.decimal = false;
@@ -665,22 +668,36 @@ impl Cpu {
                 print!("CLV false -> p.overflow");
             }
             Instruction::LDA => {
+                print!("LDA ");
                 self.regs.a = match addressing {
-                    Addressing::Immediate => operand as u8,
-                    _ => self.read(operand, ReadSize::Byte) as u8,
+                    Addressing::Immediate => {
+                        println!("#{:x}", operand);
+                        operand as u8
+                    }
+                    _ => {
+                        println!("${:x}", operand);
+                        self.read(operand, ReadSize::Byte) as u8
+                    }
                 };
                 self.regs.p.zero = self.regs.a == 0;
                 self.regs.p.negative = (self.regs.a & (1 << 7)) != 0;
-                print!("LDA: {:x} -> A:{:x}", operand, self.regs.a);
+                print!(" :{:x} -> A:{:x}", operand, self.regs.a);
             }
             Instruction::LDX => {
+                print!("LDX ");
                 self.regs.x = match addressing {
-                    Addressing::Immediate => operand as u8,
-                    _ => self.read(operand, ReadSize::Byte) as u8,
+                    Addressing::Immediate => {
+                        println!("#{}", operand);
+                        operand as u8
+                    }
+                    _ => {
+                        println!("${}", operand);
+                        self.read(operand, ReadSize::Byte) as u8
+                    }
                 };
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = (self.regs.x & (1 << 7)) != 0;
-                print!("LDX: X {}", self.regs.x);
+                print!(" : {} -> X", self.regs.x);
             }
             Instruction::LDY => {
                 self.regs.y = match addressing {
@@ -692,8 +709,8 @@ impl Cpu {
                 print!("LDY");
             }
             Instruction::STA => {
-                self.bus.write_by_cpu(operand, self.regs.a);
-                print!("STA a:{:x} -> {:x}", self.regs.a, operand);
+                //self.bus.write_by_cpu(operand, self.regs.a);
+                print!("STA ${:x}\n a:{:x} -> {:x}", operand, self.regs.a, operand);
             }
             Instruction::STX => {
                 self.bus.write_by_cpu(operand, self.regs.x);
@@ -735,7 +752,7 @@ impl Cpu {
             }
             Instruction::TXS => {
                 self.regs.sp = (self.regs.x as u16) | 0x0100;
-                print!("TXS: X:{:x} -> S(SP):{:x}", self.regs.x, self.regs.sp);
+                print!("TXS null\n : X:{:x} -> S(SP):{:x}", self.regs.x, self.regs.sp);
             }
             Instruction::PHA => {
                 self.push(self.regs.a);
@@ -952,13 +969,13 @@ impl Cpu {
             0xAC => (Instruction::LDY, Addressing::Absolute, CYCLE[index]),
             0xBC => (Instruction::LDY, Addressing::AbsoluteX, CYCLE[index]),
             //STA
-            0x85 => (Instruction::STA, Addressing::Immediate, CYCLE[index]),
-            0x95 => (Instruction::STA, Addressing::ZeroPage, CYCLE[index]),
-            0x8D => (Instruction::STA, Addressing::ZeroPageX, CYCLE[index]),
-            0x9D => (Instruction::STA, Addressing::ZeroPageY, CYCLE[index]),
-            0x99 => (Instruction::STA, Addressing::Absolute, CYCLE[index]),
-            0x81 => (Instruction::STA, Addressing::AbsoluteX, CYCLE[index]),
-            0x91 => (Instruction::STA, Addressing::AbsoluteY, CYCLE[index]),
+            0x85 => (Instruction::STA, Addressing::ZeroPage, CYCLE[index]),
+            0x95 => (Instruction::STA, Addressing::ZeroPageX, CYCLE[index]),
+            0x8D => (Instruction::STA, Addressing::Absolute, CYCLE[index]),
+            0x9D => (Instruction::STA, Addressing::AbsoluteX, CYCLE[index]),
+            0x99 => (Instruction::STA, Addressing::AbsoluteY, CYCLE[index]),
+            0x81 => (Instruction::STA, Addressing::IndirectX, CYCLE[index]),
+            0x91 => (Instruction::STA, Addressing::IndirectY, CYCLE[index]),
             //STX
             0x86 => (Instruction::STX, Addressing::ZeroPage, CYCLE[index]),
             0x96 => (Instruction::STX, Addressing::ZeroPageY, CYCLE[index]),
