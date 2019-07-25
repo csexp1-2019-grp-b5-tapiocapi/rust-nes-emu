@@ -1,5 +1,7 @@
+#![allow(dead_code)]
+
 use crate::rom::CharacterRom;
-use crate::ram::Ram;
+use enum_primitive::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Sprite {
@@ -21,84 +23,269 @@ impl Sprite {
     }
 }
 
+struct Vram {
+    mem: Vec<u8>,
+}
+
+impl Vram {
+    #[allow(dead_code)]
+    const ADDREE_SIZE: usize = 0x4000;
+    #[allow(dead_code)]
+    const VRAM_SIZE: usize = 0x2000;
+    const VRAM_START: usize = 0x2000; 
+
+    fn new() -> Self {
+        Self {
+            mem: vec![0; Self::VRAM_SIZE],
+        }
+    }
+
+    fn reset(&mut self) {
+        self.mem = vec![0; Self::VRAM_SIZE];
+    }
+
+    fn read(&self, addr: u16) -> u8 {
+        match addr {
+            0x0000..=0x0FFF => {
+                /* pattern table 0 */
+                unimplemented!();
+            }
+            0x1000..=0x1FFF => {
+                /* pattern table 1 */
+                unimplemented!();
+            }
+            0x2000..=0x23BF => {
+                /* name table 0 */
+                self.mem[addr as usize - Vram::VRAM_START]
+            }
+            0x23C0..=0x23FF => {
+                /* attr table 0 */
+                unimplemented!();
+            }
+            0x2400..=0x27BF => {
+                /* name table 1 */
+                unimplemented!();
+            }
+            0x27C0..=0x27FF => {
+                /* attr table 1 */
+                unimplemented!();
+            }
+            0x2800..=0x2BBF => {
+                /* name table 2 */
+                unimplemented!();
+            }
+            0x2BC0..=0x2BFF => {
+                /* attr table 2 */
+                unimplemented!();
+            }
+            0x2C00..=0x2FBF => {
+                /* name table 3 */
+                unimplemented!();
+            }
+            0x2FC0..=0x2FFF => {
+                /* attr table 3 */
+                unimplemented!();
+            }
+            0x3000..=0x3EFF => {
+                /* mirror of 0x2000 ..= 0x2EFF */
+                self.read(addr - 0x1000)
+            }
+            _ => panic!("Invalid read at 0x{:X}", addr),
+        }
+    }
+
+    fn write(&mut self, addr: u16, data: u8) {
+        match addr {
+            0x0000..=0x0FFF => {
+                /* pattern table 0 */
+                unimplemented!();
+            }
+            0x1000..=0x1FFF => {
+                /* pattern table 1 */
+                unimplemented!();
+            }
+            0x2000..=0x23BF => {
+                /* name table 0 */
+                self.mem[addr as usize - Vram::VRAM_START] = data;
+            }
+            0x23C0..=0x23FF => {
+                /* attr table 0 */
+                unimplemented!();
+            }
+            0x2400..=0x27BF => {
+                /* name table 1 */
+                unimplemented!();
+            }
+            0x27C0..=0x27FF => {
+                /* attr table 1 */
+                unimplemented!();
+            }
+            0x2800..=0x2BBF => {
+                /* name table 2 */
+                unimplemented!();
+            }
+            0x2BC0..=0x2BFF => {
+                /* attr table 2 */
+                unimplemented!();
+            }
+            0x2C00..=0x2FBF => {
+                /* name table 3 */
+                unimplemented!();
+            }
+            0x2FC0..=0x2FFF => {
+                /* attr table 3 */
+                unimplemented!();
+            }
+            0x3000..=0x3EFF => {
+                /* mirror of 0x2000 ..= 0x2EFF */
+                self.write(addr - 0x1000, data);
+            }
+            _ => panic!("Invalid read at 0x{:X}", addr),
+        }
+    }
+}
+
+
+enum_from_primitive! {
+    #[doc = "PPU memory mapped register type"]
+    #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub enum RegType {
+        PPUCTRL     = 0,
+        PPUMASK     = 1,
+        PPUSTATUS   = 2,
+        OAMADDR     = 3,
+        OAMDATA     = 4,
+        PPUSCROLL   = 5,
+        PPUADDR     = 6,
+        PPUDATA     = 7,
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum PpuPtrState {
+    High,
+    Low
+}
+
+impl PpuPtrState {
+    fn toggle(&mut self) {
+        match *self {
+            PpuPtrState::High => *self = PpuPtrState::Low,
+            PpuPtrState::Low => *self = PpuPtrState::High,
+        }
+    }
+}
+
+struct PpuPtr {
+    addr: u16,
+    state: PpuPtrState,
+}
+
+impl Default for PpuPtr {
+    fn default() -> PpuPtr {
+        PpuPtr {
+            addr: 0,
+            state: PpuPtrState::High,
+        }
+    }
+}
+
+impl PpuPtr {
+    pub fn new() -> PpuPtr {
+        Default::default()
+    }
+
+    pub fn get(&self) -> u16 {
+        self.addr
+    }
+
+    pub fn get_and_inc(&mut self) -> u16 {
+        let addr = self.addr;
+        self.addr += 1;
+        addr
+    }
+
+    pub fn write(&mut self, addr: u8) {
+        match self.state {
+            PpuPtrState::High => self.addr &= (addr as u16) << 8,
+            PpuPtrState::Low => self.addr &= addr as u16,
+        }
+        self.state.toggle();
+    }
+
+    pub fn reset(&mut self) {
+        *self = Default::default();
+    }
+}
 
 pub struct Ppu {
+    ppuptr: PpuPtr,
+    vram: Vram,
     sprites: Vec<Sprite>,
-    vram: Ram,
 }
 
 impl Ppu {
     pub fn new(chr_rom: &CharacterRom) -> Ppu {
         Ppu {
+            ppuptr: PpuPtr::new(),
+            vram: Vram::new(),
             sprites: chr_rom.data.chunks(16).map(Sprite::new).collect(),
-            vram: Ram::new(0x4000),
         }
     }
 
-    pub fn read(&self, addr: u16) -> u8 {
-        match addr {
-            2 => {
-                /* PPU state */
+    pub fn read(&self, regtype: RegType) -> u8 {
+        match regtype {
+            RegType::PPUSTATUS => {
                 unimplemented!();
             }
-            4 => {
-                /* OAM data */
+            RegType::OAMDATA => {
                 unimplemented!();
             }
-            7 => {
-                /* PPU data */
+            RegType::PPUDATA => {
                 unimplemented!();
             }
-            _ => {
-                unimplemented!();
-            }
+            _ => panic!("Trying to read write-only address: {:?}", regtype)
         }
     }
 
-    pub fn write(&self, addr: u16, data: u8) {
-        match addr {
-            0 => {
-                /* PPU CTL */
+    pub fn write(&mut self, regtype: RegType, data: u8) {
+        match regtype {
+            RegType::PPUCTRL => {
                 unimplemented!();
             }
-            1 => {
-                /* PPU MASK */
+            RegType::PPUMASK => {
                 unimplemented!();
             }
-            3 => {
-                /* OAM ADDR */
+            RegType::OAMADDR => {
                 unimplemented!();
             }
-            4 => {
-                /* OAM DATA */
+            RegType::OAMDATA => {
                 unimplemented!();
             }
-            5 => {
-                /* PPU SCROLL */
+            RegType::PPUSCROLL => {
                 unimplemented!();
             }
-            6 => {
-                /* PPU ADDR */
-                unimplemented!();
+            RegType::PPUADDR => {
+                self.ppuptr.write(data);
             }
-            7 => {
-                /* PPU DATA */
-                unimplemented!();
+            RegType::PPUDATA => {
+                self.vram.write(self.ppuptr.get_and_inc(), data);
             }
-            _ => {
-                unimplemented!();
-            }
+            _ => panic!("Trying to write read-only address: {:?}", regtype)
         }
     }
 }
+
 
 #[test]
 fn sprite_test() {
     use crate::rom;
     use opencv::prelude::*;
 
-    //let buffer = std::fs::read("sample1/sample1.nes").unwrap();
-    let buffer = std::fs::read("/home/devm33/Documents/fc3_full_win32_20190611/fc3_full_win32_20190611/marioBros3.nes").unwrap();
+    let buffer = std::fs::read("sample1/sample1.nes").unwrap();
+    //let buffer =
+    //    std::fs::read("~/Documents/fc3_full_win32_20190611/fc3_full_win32_20190611/marioBros3.nes")
+    //        .unwrap();
 
     let (_, chr_rom) = rom::load(buffer);
     let ppu = Ppu::new(&chr_rom);
@@ -110,9 +297,10 @@ fn sprite_test() {
     let count = 100i32;
     let length = 24;
 
-    let sprites_img =
-        unsafe { opencv::core::Mat::new_rows_cols(length * count, length * count, opencv::core::CV_8UC1).unwrap() };
-
+    let sprites_img = unsafe {
+        opencv::core::Mat::new_rows_cols(length * count, length * count, opencv::core::CV_8UC1)
+            .unwrap()
+    };
 
     'outer: for i in 0..count {
         for j in 0..count {
