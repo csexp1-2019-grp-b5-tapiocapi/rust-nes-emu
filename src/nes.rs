@@ -29,10 +29,7 @@ impl Nes {
         self.cpu.reset();
         let mut a:u64 = 0;
         loop {
-            if a < 100 {
-                self.cpu.run();
-            }
-            a += 1;
+            self.cpu.run();
         }
     }
 }
