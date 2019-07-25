@@ -46,8 +46,4 @@ impl CharacterRom {
             data: data.to_vec(),
         }
     }
-
-    pub fn read(&self, addr: u16) -> u8 {
-        return self.data[addr as usize];
-    }
 }

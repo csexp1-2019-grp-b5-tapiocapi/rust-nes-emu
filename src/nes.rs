@@ -1,7 +1,7 @@
 use crate::cpu::Cpu;
 use crate::cpu_bus::CpuBus;
-use crate::rom;
 use crate::ram::Ram;
+use crate::rom;
 
 use std::io;
 use std::path::Path;
@@ -27,7 +27,7 @@ impl Nes {
     pub fn start(&mut self) {
         //pirintln!("{:?}", self.game_rom);
         self.cpu.reset();
-        let mut a:u64 = 0;
+        let mut a: u64 = 0;
         loop {
             self.cpu.run();
         }

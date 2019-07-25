@@ -318,9 +318,13 @@ impl Cpu {
                             if sign_bit_a != result_bit {
                                 self.regs.p.carry = true;
                                 true
-                            } else {false}
-                        } else {false}
-                    },
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         let sign_bit_data = (data >> 7) as i8;
@@ -547,7 +551,9 @@ impl Cpu {
                     self.push_status();
                     self.regs.p.interrupt = true;
                     self.regs.pc = self.read(0xFFFE, ReadSize::Word);
-                } else {return;}
+                } else {
+                    return;
+                }
                 print!("BRK");
                 let interrupt = self.regs.p.interrupt;
                 if !interrupt {
