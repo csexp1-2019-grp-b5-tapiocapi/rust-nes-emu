@@ -221,10 +221,10 @@ impl Cpu {
     }
 
     fn fetch_addr(&mut self) -> u16 {
-                let lower_byte = self.fetch();
-                let upper_byte = self.fetch();
-                //println!("fetch {:x} {:x}", upper_byte, lower_byte);
-                ((upper_byte as u16) << 8) | lower_byte as u16
+        let lower_byte = self.fetch();
+        let upper_byte = self.fetch();
+        //println!("fetch {:x} {:x}", upper_byte, lower_byte);
+        ((upper_byte as u16) << 8) | lower_byte as u16
     }
     fn fetch_operand(&mut self, addressing: &Addressing) -> u16 {
         match addressing {
@@ -234,12 +234,8 @@ impl Cpu {
             Addressing::ZeroPage => self.fetch() as u16,
             Addressing::ZeroPageX => (self.fetch() as u16 + self.regs.x as u16) & 0xFF,
             Addressing::ZeroPageY => (self.fetch() as u16 + self.regs.y as u16) & 0xFF,
-            Addressing::AbsoluteX => {
-                (self.fetch_addr() as i32 + self.regs.x as i32) as u16
-            }
-            Addressing::AbsoluteY => {
-                (self.fetch_addr() as i32 + self.regs.y as i32) as u16
-            }
+            Addressing::AbsoluteX => (self.fetch_addr() as i32 + self.regs.x as i32) as u16,
+            Addressing::AbsoluteY => (self.fetch_addr() as i32 + self.regs.y as i32) as u16,
             Addressing::Implied => 0,
             Addressing::Relative => {
                 let addr = self.regs.pc + 1;
@@ -274,7 +270,7 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = ((operand as u8) >> 7) as i8;
-                        self.regs.a += operand as i8 + if self.regs.p.carry {1} else {0};
+                        self.regs.a += operand as i8 + if self.regs.p.carry { 1 } else { 0 };
                         let result_bit = ((self.regs.a as u8) >> 7) as i8;
                         self.regs.p.overflow = if sign_bit_a == sign_bit_op {
                             if sign_bit_a != result_bit {
@@ -312,7 +308,7 @@ impl Cpu {
                 match addressing {
                     Addressing::Immediate => {
                         let sign_bit_op = (operand as u8 >> 7) as i8;
-                        self.regs.a -= operand as i8 + if self.regs.p.carry {0} else {1};
+                        self.regs.a -= operand as i8 + if self.regs.p.carry { 0 } else { 1 };
                         let result_bit = ((self.regs.a as u8) >> 7) as i8;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_op {
                             if sign_bit_a != result_bit {
@@ -328,7 +324,7 @@ impl Cpu {
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         let sign_bit_data = (data >> 7) as i8;
-                        self.regs.a -= data as i8 + if self.regs.p.carry {1} else {0};
+                        self.regs.a -= data as i8 + if self.regs.p.carry { 1 } else { 0 };
                         let result_bit = ((self.regs.a as u8) >> 7) as i8;
                         self.regs.p.overflow = if sign_bit_a != sign_bit_data {
                             if sign_bit_a != result_bit {
@@ -770,7 +766,10 @@ impl Cpu {
             }
             Instruction::TXS => {
                 self.regs.sp = ((self.regs.x as u8) as u16) | 0x0100;
-                print!("TXS null\n : X:{:x} -> S(SP):{:x}", self.regs.x, self.regs.sp);
+                print!(
+                    "TXS null\n : X:{:x} -> S(SP):{:x}",
+                    self.regs.x, self.regs.sp
+                );
             }
             Instruction::PHA => {
                 self.push(self.regs.a as u8);

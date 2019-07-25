@@ -8,6 +8,5 @@ edition = "2018"
 
 [dependencies]
 enum_primitive = "*"
-
-[dev-dependencies]
+num-traits = "0.2"
 opencv = {version = "0.17", default-features = false, features = ["opencv-41"]}
