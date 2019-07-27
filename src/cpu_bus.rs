@@ -58,7 +58,7 @@ impl CpuBus {
             self.prog_rom.read(addr - 0x8000)
         } else {
             //0xC000 ~ 0xFFFF   // PRG-ROM
-            self.prog_rom.read(addr - 0x8000)
+            self.prog_rom.read(addr - 0xC000)
         }
     }
 
