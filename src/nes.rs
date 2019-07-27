@@ -21,7 +21,7 @@ impl Nes {
         let wram = Ram::new(2048);
         let ppu = ppu::Ppu::new(&chr);
 
-        let cpu_bus = CpuBus::new(wram, prog, chr, ppu);
+        let cpu_bus = CpuBus::new(wram, prog, ppu);
 
         Ok(Nes {
             cpu: Cpu::new(cpu_bus),

@@ -7,10 +7,6 @@ impl Ram {
         Self { ram: vec![0; size] }
     }
 
-    pub fn reset(&mut self) {
-        self.ram = vec![0; self.ram.len()];
-    }
-
     pub fn write(&mut self, addr: u16, data: u8) {
         self.ram[addr as usize] = data;
     }

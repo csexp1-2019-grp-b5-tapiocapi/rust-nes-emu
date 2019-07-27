@@ -7,7 +7,6 @@ use crate::rom;
 pub struct CpuBus {
     wram: ram::Ram,
     prog_rom: rom::ProgramRom,
-    chr_rom: rom::CharacterRom,
     ppu: ppu::Ppu,
 }
 
@@ -15,13 +14,11 @@ impl CpuBus {
     pub fn new(
         wram: ram::Ram,
         prog_rom: rom::ProgramRom,
-        chr_rom: rom::CharacterRom,
         ppu: ppu::Ppu,
     ) -> CpuBus {
         CpuBus {
             wram,
             prog_rom,
-            chr_rom,
             ppu,
         }
     }
