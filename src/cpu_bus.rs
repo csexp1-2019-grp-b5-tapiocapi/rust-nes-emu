@@ -7,7 +7,6 @@ use crate::rom;
 pub struct CpuBus {
     wram: ram::Ram,
     prog_rom: rom::ProgramRom,
-    chr_rom: rom::CharacterRom,
     ppu: ppu::Ppu,
 }
 
@@ -15,13 +14,11 @@ impl CpuBus {
     pub fn new(
         wram: ram::Ram,
         prog_rom: rom::ProgramRom,
-        chr_rom: rom::CharacterRom,
         ppu: ppu::Ppu,
     ) -> CpuBus {
         CpuBus {
             wram,
             prog_rom,
-            chr_rom,
             ppu,
         }
     }
@@ -58,7 +55,7 @@ impl CpuBus {
             self.prog_rom.read(addr - 0x8000)
         } else {
             //0xC000 ~ 0xFFFF   // PRG-ROM
-            self.prog_rom.read(addr - 0x8000)
+            self.prog_rom.read(addr - 0xC000)
         }
     }
 

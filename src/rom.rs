@@ -1,6 +1,10 @@
 pub const INES_HEADER_SIZE: usize = 0x0010;
 
-pub fn load(rom: Vec<u8>) -> (ProgramRom, CharacterRom) {
+pub fn load(rom: Vec<u8>) -> Option<(ProgramRom, CharacterRom)> {
+    if rom.len() < 16 || rom[0..3] != ['N' as u8, 'E' as u8, 'S' as u8] {
+        return None;
+    }
+
     let program_rom_size = rom[4] as usize;
     let character_rom_size = rom[5] as usize;
 
@@ -14,14 +18,14 @@ pub fn load(rom: Vec<u8>) -> (ProgramRom, CharacterRom) {
         (INES_HEADER_SIZE + trainer_size + program_rom_size * 0x4000) as usize; //16KiB -> 0x4000
     let character_rom_end = (character_rom_start + character_rom_size * 0x2000) as usize; //8Kib  -> 0x2000
 
-    (
+    Some((
         ProgramRom::new(&rom[INES_HEADER_SIZE..character_rom_start]),
         CharacterRom::new(&rom[character_rom_start..character_rom_end]),
-    )
+    ))
 }
 
 pub struct ProgramRom {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl ProgramRom {

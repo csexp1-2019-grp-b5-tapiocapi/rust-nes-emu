@@ -17,11 +17,14 @@ impl Nes {
     pub fn load<P: AsRef<Path>>(file_path: P) -> io::Result<Nes> {
         let buffer = std::fs::read(file_path.as_ref())?;
 
-        let (prog, chr) = rom::load(buffer);
+        let (prog, chr) = rom::load(buffer).ok_or_else(|| {
+            io::Error::new(std::io::ErrorKind::Other, "Not an NES ROM")
+        })?;
+
         let wram = Ram::new(2048);
         let ppu = ppu::Ppu::new(&chr);
 
-        let cpu_bus = CpuBus::new(wram, prog, chr, ppu);
+        let cpu_bus = CpuBus::new(wram, prog, ppu);
 
         Ok(Nes {
             cpu: Cpu::new(cpu_bus),

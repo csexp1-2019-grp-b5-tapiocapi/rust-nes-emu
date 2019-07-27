@@ -3,7 +3,6 @@
 use crate::nes;
 use crate::rom::CharacterRom;
 use enum_primitive::*;
-use opencv::prelude::*;
 
 pub const SPRITE_WIDTH: usize = 8;
 pub const SPRITE_HEIGHT: usize = 8;
@@ -125,7 +124,7 @@ impl Vram {
                 /* mirror of 0x2000 ..= 0x2EFF */
                 self.read(addr - 0x1000)
             }
-            _ => panic!("Invalid read at 0x{:X}", addr),
+            _ => panic!("VRAM: Invalid read at 0x{:X}", addr),
         }
     }
 
@@ -193,7 +192,7 @@ impl Vram {
                 /* mirror of 0x3F00-0x3F1F */
                 unimplemented!();
             }
-            _ => panic!("Invalid read at 0x{:X}", addr),
+            _ => panic!("VRAM: Invalid write at 0x{:X}", addr),
         }
     }
 
@@ -321,16 +320,108 @@ impl PpuPtr {
     }
 }
 
+struct PpuCtrlReg {
+    flags: u8,
+}
+
+impl PpuCtrlReg {
+    fn new() -> PpuCtrlReg {
+        Self::from_u8(0)
+    }
+
+    fn from_u8(flags: u8) -> PpuCtrlReg {
+        PpuCtrlReg { flags }
+    }
+
+    fn set(&mut self, flags: u8) {
+        self.flags = flags;
+    }
+
+    /*
+     * Base nametable address
+     * (0 = $2000; 1 = $2400; 2 = $2800; 3 = $2C00)
+     */
+    fn base_nametable_addr(&self) -> u16 {
+        match self.flags & 0b0000_0011 {
+            0b0000_0000 => 0x2000,
+            0b0000_0001 => 0x2400,
+            0b0000_0010 => 0x2800,
+            0b0000_0011 => 0x2C00,
+            _ => unreachable!(),
+        }
+    }
+
+    /*
+     * VRAM address increment per CPU read/write of PPUDATA
+     * (0: add 1, going across; 1: add 32, going down)
+     *
+     * Return: true if incrementation required
+     */
+    fn vram_addr_increment(&self) -> bool {
+        (self.flags & 0b0000_0100) == 0
+    }
+
+    /*
+     * Sprite pattern table address for 8x8 sprites
+     * (0: $0000; 1: $1000; ignored in 8x16 mode)
+     */
+    fn sprite_pattern_table_addr(&self) -> u16 {
+        if (self.flags & 0b0000_1000) == 0 {
+            0x0000
+        } else {
+            0x1000
+        }
+    }
+
+    /*
+     * Background pattern table address (0: $0000; 1: $1000)
+     */
+    fn bg_pattern_table_addr(&self) -> u16 {
+        if (self.flags & 0b0001_0000) == 0 {
+            0x0000
+        } else {
+            0x1000
+        }
+    }
+
+    /*
+     * Sprite size (0: 8x8 pixels; 1: 8x16 pixels)
+     */
+    fn sprite_size(&self) -> bool {
+        (self.flags & 0b0010_0000) != 0
+    }
+
+    /*
+     * PPU master/slave select
+     * (0: read backdrop from EXT pins; 1: output color on EXT pins)
+     */
+    fn ppu_master_slave(&self) -> bool {
+        (self.flags & 0b0100_0000) != 0
+    }
+
+    /*
+     * Generate an NMI at the start of the
+     * vertical blanking interval (0: off; 1: on)
+     */
+    fn generate_nmi(&self) -> bool {
+        (self.flags & 0b1000_0000) != 0
+    }
+}
+
 pub struct Ppu {
     ppuptr: PpuPtr,
+    ctrlreg: PpuCtrlReg,
     vram: Vram,
+    last_written: u8,
 }
 
 impl Ppu {
     pub fn new(chr_rom: &CharacterRom) -> Ppu {
         Ppu {
             ppuptr: PpuPtr::new(),
+            ctrlreg: PpuCtrlReg::new(),
             vram: Vram::new(chr_rom),
+            last_written: 0,
         }
     }
 
@@ -338,7 +429,8 @@ impl Ppu {
         println!("PPU: read: {:?}", regtype);
         match regtype {
             RegType::PPUSTATUS => {
-                unimplemented!();
+                /* our vblank always ready for now :) */
+                0b1000_0000 | (self.last_written & 0b0001_1111)
             }
             RegType::OAMDATA => {
                 unimplemented!();
@@ -346,15 +438,17 @@ impl Ppu {
             RegType::PPUDATA => {
                 unimplemented!();
             }
-            _ => panic!("Trying to read write-only address: {:?}", regtype),
+            _ => panic!("PPU: Trying to read write-only register: {:?}", regtype),
         }
     }
 
     pub fn write(&mut self, regtype: RegType, data: u8) {
         println!("PPU: write: {:?}: {:x}", regtype, data);
+        self.last_written = data;
+
         match regtype {
             RegType::PPUCTRL => {
-                //unimplemented!();
+                self.ctrlreg.set(data);
             }
             RegType::PPUMASK => {
                 //unimplemented!();
@@ -372,9 +466,15 @@ impl Ppu {
                 self.ppuptr.write(data);
             }
             RegType::PPUDATA => {
-                self.vram.write(self.ppuptr.get_and_inc(), data);
+                let addr = if self.ctrlreg.vram_addr_increment() {
+                    self.ppuptr.get_and_inc()
+                } else {
+                    self.ppuptr.get()
+                };
+
+                self.vram.write(addr, data);
             }
-            _ => panic!("Trying to write read-only address: {:?}", regtype),
+            _ => panic!("PPU: Trying to write read-only register: {:?}", regtype),
         }
     }
 }
@@ -389,7 +489,7 @@ fn sprite_test() {
     //    std::fs::read("~/Documents/fc3_full_win32_20190611/fc3_full_win32_20190611/marioBros3.nes")
     //        .unwrap();
 
-    let (_, chr_rom) = rom::load(buffer);
+    let (_, chr_rom) = rom::load(buffer).unwrap();
     let ppu = Ppu::new(&chr_rom);
 
     println!("chr rom size: {}", chr_rom.data.len());
@@ -470,4 +570,25 @@ fn sprite_test() {
         opencv::highgui::imshow(title, &scaled);
         opencv::highgui::wait_key(0).unwrap();
     }*/
+}
+
+#[test]
+fn ppu_ctrl_reg_test() {
+    let ctrlreg1 = PpuCtrlReg::new();
+    assert_eq!(ctrlreg1.base_nametable_addr(), 0x2000);
+    assert_eq!(ctrlreg1.vram_addr_increment(), true);
+    assert_eq!(ctrlreg1.sprite_pattern_table_addr(), 0x0000);
+    assert_eq!(ctrlreg1.bg_pattern_table_addr(), 0x0000);
+    assert_eq!(ctrlreg1.sprite_size(), false);
+    assert_eq!(ctrlreg1.ppu_master_slave(), false);
+    assert_eq!(ctrlreg1.generate_nmi(), false);
+
+    let ctrlreg2 = PpuCtrlReg::from_u8(0x8);
+    assert_eq!(ctrlreg2.base_nametable_addr(), 0x2000);
+    assert_eq!(ctrlreg2.vram_addr_increment(), true);
+    assert_eq!(ctrlreg2.sprite_pattern_table_addr(), 0x1000);
+    assert_eq!(ctrlreg2.bg_pattern_table_addr(), 0x0000);
+    assert_eq!(ctrlreg2.sprite_size(), false);
+    assert_eq!(ctrlreg2.ppu_master_slave(), false);
+    assert_eq!(ctrlreg2.generate_nmi(), false);
 }
