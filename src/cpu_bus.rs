@@ -11,11 +11,7 @@ pub struct CpuBus {
 }
 
 impl CpuBus {
-    pub fn new(
-        wram: ram::Ram,
-        prog_rom: rom::ProgramRom,
-        ppu: ppu::Ppu,
-    ) -> CpuBus {
+    pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom, ppu: ppu::Ppu) -> CpuBus {
         CpuBus {
             wram,
             prog_rom,
@@ -55,7 +51,13 @@ impl CpuBus {
             self.prog_rom.read(addr - 0x8000)
         } else {
             //0xC000 ~ 0xFFFF   // PRG-ROM
-            self.prog_rom.read(addr - 0xC000)
+            let base_addr = if self.prog_rom.data.len() == 0x4000 {
+                0xC000
+            } else {
+                0x8000
+            };
+
+            self.prog_rom.read(addr - base_addr)
         }
     }
 
