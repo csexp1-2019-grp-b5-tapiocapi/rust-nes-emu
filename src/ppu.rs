@@ -2,6 +2,7 @@
 
 use crate::nes;
 use crate::rom::CharacterRom;
+use bitflags::bitflags;
 use enum_primitive::*;
 
 pub const SPRITE_WIDTH: usize = 8;
@@ -49,7 +50,6 @@ impl Vram {
             sprites: chr_rom.data.chunks(16).map(Sprite::new).collect(),
         };
 
-        vram.show();
         vram
     }
 
@@ -57,7 +57,9 @@ impl Vram {
         self.mem = vec![0; Self::VRAM_SIZE];
     }
 
-    fn show(&self) {
+    fn show(&mut self) {
+        self.update_whole_vbuf();
+
         let mut screen = opencv::core::Mat::new().unwrap();
 
         opencv::imgproc::resize(
@@ -75,7 +77,7 @@ impl Vram {
         /*
          * waiting for 1 millisec sometimes causes incomplete drawing
          */
-        opencv::highgui::wait_key(10).unwrap();
+        opencv::highgui::wait_key(100).unwrap();
     }
 
     fn read(&self, addr: u16) -> u8 {
@@ -142,35 +144,31 @@ impl Vram {
             0x2000..=0x23BF => {
                 /* name table 0 */
                 let pos = addr as usize - Vram::VRAM_START;
-                println!("VRAM: SPRITES: drawing: {}", data as char);
-
                 self.mem[pos] = data;
-                self.update_vbuf(pos as u16);
-                self.show();
             }
             0x23C0..=0x23FF => {
                 /* attr table 0 */
-                unimplemented!();
+                //unimplemented!();
             }
             0x2400..=0x27BF => {
                 /* name table 1 */
-                unimplemented!();
+                //unimplemented!();
             }
             0x27C0..=0x27FF => {
                 /* attr table 1 */
-                unimplemented!();
+                //unimplemented!();
             }
             0x2800..=0x2BBF => {
                 /* name table 2 */
-                unimplemented!();
+                //unimplemented!();
             }
             0x2BC0..=0x2BFF => {
                 /* attr table 2 */
-                unimplemented!();
+                //unimplemented!();
             }
             0x2C00..=0x2FBF => {
                 /* name table 3 */
-                unimplemented!();
+                //unimplemented!();
             }
             0x2FC0..=0x2FFF => {
                 /* attr table 3 */
@@ -186,11 +184,11 @@ impl Vram {
             }
             0x3F10..=0x3F1F => {
                 /* sprite palette */
-                unimplemented!();
+                //unimplemented!();
             }
             0x3F20..=0x3FFF => {
                 /* mirror of 0x3F00-0x3F1F */
-                unimplemented!();
+                //unimplemented!();
             }
             _ => panic!("VRAM: Invalid write at 0x{:X}", addr),
         }
@@ -224,13 +222,13 @@ impl Vram {
 
     fn update_whole_vbuf(&mut self) {
         for (i, sprite) in (&self.mem[0..960]).iter().enumerate() {
-            println!(
-                "get_mat: i={} sprite={}: ({}, {})",
-                i,
-                sprite,
-                ((i % 32) * SPRITE_WIDTH) as i32,
-                ((i / 32) * SPRITE_HEIGHT) as i32
-            );
+            //println!(
+            //    "get_mat: i={} sprite={}: ({}, {})",
+            //    i,
+            //    sprite,
+            //    ((i % 32) * SPRITE_WIDTH) as i32,
+            //    ((i / 32) * SPRITE_HEIGHT) as i32
+            //);
 
             let mut roi = opencv::core::Mat::roi(
                 &self.vbuf,
@@ -408,9 +406,24 @@ impl PpuCtrlReg {
     }
 }
 
+bitflags! {
+    struct PpuMask: u8 {
+        const GRAYSCALE             = 0b0000_0001;
+        const SHOW_BG_LEFTMOST      = 0b0000_0010;
+        const SHOW_SPRITES_LEFTMOST = 0b0000_0100;
+        const SHOW_BG               = 0b0000_1000;
+        const SHOW_SPRITES          = 0b0001_0000;
+        const SHOW_ALL              = 0b0001_1110;
+        const EMPHASIZE_RED         = 0b0010_0000;
+        const EMPHASIZE_GREEN       = 0b0100_0000;
+        const EMPHASIZE_BLUE        = 0b1000_0000;
+    }
+}
+
 pub struct Ppu {
     ppuptr: PpuPtr,
     ctrlreg: PpuCtrlReg,
+    mask: PpuMask,
     vram: Vram,
     last_written: u8,
 }
@@ -420,6 +433,7 @@ impl Ppu {
         Ppu {
             ppuptr: PpuPtr::new(),
             ctrlreg: PpuCtrlReg::new(),
+            mask: PpuMask::empty(),
             vram: Vram::new(chr_rom),
             last_written: 0,
         }
@@ -457,7 +471,11 @@ impl Ppu {
                 self.ctrlreg.set(data);
             }
             RegType::PPUMASK => {
-                //unimplemented!();
+                /* use unwrap() cuz all bits correspond to flags */
+                self.mask = PpuMask::from_bits(data).unwrap();
+                if self.mask.intersects(PpuMask::SHOW_ALL) {
+                    self.vram.show();
+                }
             }
             RegType::OAMADDR => {
                 unimplemented!();
@@ -479,6 +497,9 @@ impl Ppu {
                 };
 
                 self.vram.write(addr, data);
+                if self.mask.intersects(PpuMask::SHOW_ALL) {
+                    self.vram.show();
+                }
             }
             _ => panic!("PPU: Trying to write read-only register: {:?}", regtype),
         }
@@ -597,4 +618,18 @@ fn ppu_ctrl_reg_test() {
     assert_eq!(ctrlreg2.sprite_size(), false);
     assert_eq!(ctrlreg2.ppu_master_slave(), false);
     assert_eq!(ctrlreg2.generate_nmi(), false);
+}
+
+#[test]
+fn ppu_mask_test() {
+    let mask1 = PpuMask::from_bits(0x1e).unwrap();
+    assert!(!mask1.contains(PpuMask::GRAYSCALE));
+    assert!(mask1.contains(PpuMask::SHOW_BG_LEFTMOST));
+    assert!(mask1.contains(PpuMask::SHOW_SPRITES_LEFTMOST));
+    assert!(mask1.contains(PpuMask::SHOW_BG));
+    assert!(mask1.contains(PpuMask::SHOW_SPRITES));
+    assert!(mask1.contains(PpuMask::SHOW_ALL));
+    assert!(!mask1.contains(PpuMask::EMPHASIZE_RED));
+    assert!(!mask1.contains(PpuMask::EMPHASIZE_GREEN));
+    assert!(!mask1.contains(PpuMask::EMPHASIZE_BLUE));
 }
