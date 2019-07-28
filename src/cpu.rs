@@ -173,7 +173,6 @@ impl Cpu {
                 let upper = bus.read_by_cpu(addr + 0x0001);
                 let mut byte = (upper as u16) << 8;
                 byte |= lower as u16;
-                println!("{} {} ", lower, upper);
                 byte
             }
             ReadSize::Byte => bus.read_by_cpu(addr) as u16,
@@ -247,17 +246,21 @@ impl Cpu {
             }
             Addressing::Indirect => {
                 let addr = self.fetch_addr();
-                self.read(addr, ReadSize::Word)
+                let lower_byte = self.read(addr, ReadSize::Byte);
+                let upper_byte = self.read(addr + 1, ReadSize::Byte);
+                (upper_byte << 8) | lower_byte
             }
             Addressing::IndirectX => {
                 let addr = (self.fetch() + self.regs.x as u16) & 0xFF;
-                self.read(addr, ReadSize::Word)
+                let lower_byte = self.read(addr, ReadSize::Byte);
+                let upper_byte = self.read(addr + 1, ReadSize::Byte);
+                (upper_byte << 8) | lower_byte
             }
             Addressing::IndirectY => {
                 let addr = (self.fetch() as u16) & 0xFF;
-                let upper_byte = self.read(addr, ReadSize::Byte);
-                let lower_byte = self.read(addr + 1, ReadSize::Byte);
-                (upper_byte << 8) & lower_byte + self.regs.y as u16
+                let lower_byte = self.read(addr, ReadSize::Byte);
+                let upper_byte = self.read(addr + 1, ReadSize::Byte);
+                (upper_byte << 8) | lower_byte + self.regs.y as u16
             }
             Addressing::Unknown => {
                 println!("Unknown Addressing mode");
