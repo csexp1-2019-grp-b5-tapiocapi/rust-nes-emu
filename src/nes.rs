@@ -21,7 +21,7 @@ impl Nes {
             io::Error::new(std::io::ErrorKind::Other, "Not an NES ROM")
         })?;
 
-        let wram = Ram::new(2048);
+        let wram = Ram::new(0x0800);
         let ppu = ppu::Ppu::new(&chr);
 
         let cpu_bus = CpuBus::new(wram, prog, ppu);

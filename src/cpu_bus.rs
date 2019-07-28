@@ -24,9 +24,15 @@ impl CpuBus {
         if addr < 0x0800 {
             // WRAM
             self.wram.read(addr)
+        } else if addr < 0x1000 {
+            // WRAM Mirror
+            self.wram.read(addr - 0x0800)
+        } else if addr < 0x1800 {
+            // WRAM Mirror
+            self.wram.read(addr - 0x1000)
         } else if addr < 0x2000 {
             // WRAM Mirror
-            self.wram.read(addr - 0x800)
+            self.wram.read(addr - 0x1800)
         } else if addr < 0x2008 {
             // PPU Register
             self.ppu
@@ -64,8 +70,15 @@ impl CpuBus {
     pub fn write_by_cpu(&mut self, addr: u16, data: u8) {
         if addr < 0x800 {
             self.wram.write(addr, data);
+        } else if addr < 0x1000 {
+            // WRAM Mirror
+            self.wram.write(addr - 0x0800, data)
+        } else if addr < 0x1800 {
+            // WRAM Mirror
+            self.wram.write(addr - 0x1000, data)
         } else if addr < 0x2000 {
-            self.wram.write(addr - 0x800, data);
+            // WRAM Mirror
+            self.wram.write(addr - 0x1800, data)
         } else if addr < 0x2008 {
             self.ppu
                 .write(ppu::RegType::from_u16(addr - 0x2000).unwrap(), data)
