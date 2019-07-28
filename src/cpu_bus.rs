@@ -19,7 +19,7 @@ impl CpuBus {
         }
     }
 
-    pub fn read_by_cpu(&self, addr: u16) -> u8 {
+    pub fn read_by_cpu(&mut self, addr: u16) -> u8 {
         //println!("read_by_cpu {:x}", addr);
         if addr < 0x0800 {
             // WRAM

@@ -166,7 +166,7 @@ impl Cpu {
     }
 
     fn read(&mut self, addr: u16, size: ReadSize) -> u16 {
-        let bus = &self.bus;
+        let bus = &mut self.bus;
         match size {
             ReadSize::Word => {
                 let lower = bus.read_by_cpu(addr);
