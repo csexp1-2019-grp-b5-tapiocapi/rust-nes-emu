@@ -234,15 +234,10 @@ impl Cpu {
             Addressing::ZeroPage => self.fetch() as u16,
             Addressing::ZeroPageX => (self.fetch() as u16 + self.regs.x as u16) & 0xFF,
             Addressing::ZeroPageY => (self.fetch() as u16 + self.regs.y as u16) & 0xFF,
-            Addressing::AbsoluteX => (self.fetch_addr() as i32 + self.regs.x as i32) as u16,
-            Addressing::AbsoluteY => (self.fetch_addr() as i32 + self.regs.y as i32) as u16,
+            Addressing::AbsoluteX => self.fetch_addr() + self.regs.x as u16,
+            Addressing::AbsoluteY => self.fetch_addr() + self.regs.y as u16,
             Addressing::Implied => 0,
             Addressing::Relative => {
-                //let addr = self.regs.pc - 1;
-                //let offset = self.fetch() as i8;//self.read(addr + 1, ReadSize::Byte) as i8;
-                ////self.regs.pc += 1;
-                //println!("relative: pc:{:x} offset{}", addr, offset);
-                //(addr as i32 + offset as i32) as u16
                 let base = self.fetch() as u16;
                 if base < 0x80 {
                     base + self.regs.pc
@@ -505,8 +500,8 @@ impl Cpu {
             Instruction::BIT => {
                 let result = self.regs.a as u16 & operand;
                 self.regs.p.zero = result == 0;
-                self.regs.p.negative = result & (1 << 7) == 0b1000_0000;
-                self.regs.p.overflow = result & (1 << 6) == 0b0100_0000;
+                self.regs.p.negative = (result & (1 << 7)) == 0b1000_0000;
+                self.regs.p.overflow = (result & (1 << 6)) == 0b0100_0000;
                 print!("BIT ");
             }
             Instruction::JMP => {
@@ -516,6 +511,14 @@ impl Cpu {
             Instruction::JSR => {
                 self.push(((self.regs.pc & 0xFF00) >> 8) as u8);
                 self.push((self.regs.pc & 0xFF) as u8);
+                println!("<<<<<<<<<<<<<<<<<<<");
+                let sp = self.regs.sp;
+                for i in sp..0x0200 {
+                    let data = self.read(i, ReadSize::Byte);
+                    println!("sp:{:x} val:{:x}", 
+                             i, data);
+                }
+                println!("<<<<<<<<<<<<<<<<<<<");
                 self.regs.pc = operand;
                 print!("JSR");
             }
@@ -595,12 +598,12 @@ impl Cpu {
                 let result = data as u8 + 1;
                 self.bus.write_by_cpu(operand, result);
                 self.regs.p.zero = result == 0;
-                self.regs.p.negative = (result & (1 << 7)) != 0;
+                self.regs.p.negative = self.check_negative(&self.regs.x);
                 print!("INC");
             }
             Instruction::DEC => {
                 print!("DEC");
-                let data = self.read(operand, ReadSize::Byte);
+                let data = self.read(operand, ReadSize::Byte) as u8;
                 let result = (data as i8 - 1) as u8;
                 self.bus.write_by_cpu(operand, result);
                 self.regs.p.zero = result == 0;
