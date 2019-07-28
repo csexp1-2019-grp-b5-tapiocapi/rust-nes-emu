@@ -166,7 +166,7 @@ impl Cpu {
     }
 
     fn read(&mut self, addr: u16, size: ReadSize) -> u16 {
-        let bus = &self.bus;
+        let bus = &mut self.bus;
         match size {
             ReadSize::Word => {
                 let lower = bus.read_by_cpu(addr);
@@ -498,10 +498,11 @@ impl Cpu {
                 };
             }
             Instruction::BIT => {
-                let result = self.regs.a as u16 & operand;
+                let target = self.read(operand, ReadSize::Byte) as u8;
+                let result = self.regs.a & target;
                 self.regs.p.zero = result == 0;
-                self.regs.p.negative = (result & (1 << 7)) == 0b1000_0000;
-                self.regs.p.overflow = (result & (1 << 6)) == 0b0100_0000;
+                self.regs.p.negative = target & (1 << 7) == 0b1000_0000;
+                self.regs.p.overflow = target & (1 << 6) == 0b0100_0000;
                 print!("BIT ");
             }
             Instruction::JMP => {

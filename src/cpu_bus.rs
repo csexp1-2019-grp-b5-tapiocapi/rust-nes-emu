@@ -11,11 +11,7 @@ pub struct CpuBus {
 }
 
 impl CpuBus {
-    pub fn new(
-        wram: ram::Ram,
-        prog_rom: rom::ProgramRom,
-        ppu: ppu::Ppu,
-    ) -> CpuBus {
+    pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom, ppu: ppu::Ppu) -> CpuBus {
         CpuBus {
             wram,
             prog_rom,
@@ -23,14 +19,20 @@ impl CpuBus {
         }
     }
 
-    pub fn read_by_cpu(&self, addr: u16) -> u8 {
+    pub fn read_by_cpu(&mut self, addr: u16) -> u8 {
         //println!("read_by_cpu {:x}", addr);
         if addr < 0x0800 {
             // WRAM
             self.wram.read(addr)
+        } else if addr < 0x1000 {
+            // WRAM Mirror
+            self.wram.read(addr - 0x0800)
+        } else if addr < 0x1800 {
+            // WRAM Mirror
+            self.wram.read(addr - 0x1000)
         } else if addr < 0x2000 {
             // WRAM Mirror
-            self.wram.read(addr - 0x800)
+            self.wram.read(addr - 0x1800)
         } else if addr < 0x2008 {
             // PPU Register
             self.ppu
@@ -55,15 +57,28 @@ impl CpuBus {
             self.prog_rom.read(addr - 0x8000)
         } else {
             //0xC000 ~ 0xFFFF   // PRG-ROM
-            self.prog_rom.read(addr - 0xC000)
+            let base_addr = if self.prog_rom.data.len() == 0x4000 {
+                0xC000
+            } else {
+                0x8000
+            };
+
+            self.prog_rom.read(addr - base_addr)
         }
     }
 
     pub fn write_by_cpu(&mut self, addr: u16, data: u8) {
         if addr < 0x800 {
             self.wram.write(addr, data);
+        } else if addr < 0x1000 {
+            // WRAM Mirror
+            self.wram.write(addr - 0x0800, data)
+        } else if addr < 0x1800 {
+            // WRAM Mirror
+            self.wram.write(addr - 0x1000, data)
         } else if addr < 0x2000 {
-            self.wram.write(addr - 0x800, data);
+            // WRAM Mirror
+            self.wram.write(addr - 0x1800, data)
         } else if addr < 0x2008 {
             self.ppu
                 .write(ppu::RegType::from_u16(addr - 0x2000).unwrap(), data)

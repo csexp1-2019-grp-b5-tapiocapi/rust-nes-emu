@@ -425,7 +425,7 @@ impl Ppu {
         }
     }
 
-    pub fn read(&self, regtype: RegType) -> u8 {
+    pub fn read(&mut self, regtype: RegType) -> u8 {
         println!("PPU: read: {:?}", regtype);
         match regtype {
             RegType::PPUSTATUS => {
@@ -436,7 +436,13 @@ impl Ppu {
                 unimplemented!();
             }
             RegType::PPUDATA => {
-                unimplemented!();
+                let addr = if self.ctrlreg.vram_addr_increment() {
+                    self.ppuptr.get_and_inc()
+                } else {
+                    self.ppuptr.get()
+                };
+
+                self.vram.read(addr)
             }
             _ => panic!("PPU: Trying to read write-only register: {:?}", regtype),
         }
