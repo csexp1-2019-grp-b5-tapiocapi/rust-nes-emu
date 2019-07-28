@@ -534,7 +534,6 @@ impl Cpu {
                 let lower = self.pop() as u16;
                 let upper = self.pop() as u16;
                 self.regs.pc = (upper << 8) | lower;
-                self.regs.pc += 1;
                 println!("<<<<<<<<<<<<<<<<<<<");
                 print!("RTS -> {:x}", self.regs.pc);
             }
@@ -570,7 +569,6 @@ impl Cpu {
                 };
                 self.regs.p.carry = self.regs.a >= m;
                 self.regs.p.zero = self.regs.a == m;
-                //self.regs.p.negative = self.check_negative(&(self.regs.a - m));
                 self.regs.p.negative = (self.regs.a as i8) > (m as i8);
                 print!("CMP");
             }
@@ -581,7 +579,7 @@ impl Cpu {
                 };
                 self.regs.p.carry = self.regs.x >= m;
                 self.regs.p.zero = self.regs.x == m;
-                self.regs.p.negative = self.check_negative(&(self.regs.x - m));
+                self.regs.p.negative = self.regs.x > m;
                 print!("CPX");
             }
             Instruction::CPY => {
@@ -591,12 +589,12 @@ impl Cpu {
                 };
                 self.regs.p.carry = self.regs.y >= m;
                 self.regs.p.zero = self.regs.y == m;
-                self.regs.p.negative = self.check_negative(&(self.regs.y - m));
+                self.regs.p.negative = self.regs.y > m;
                 print!("CPY");
             }
             Instruction::INC => {
                 let data = self.read(operand, ReadSize::Byte);
-                let result = data as u8 + 1;
+                let result = (data as u16 + 1) as u8;
                 self.bus.write_by_cpu(operand, result);
                 self.regs.p.zero = result == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
@@ -605,36 +603,35 @@ impl Cpu {
             Instruction::DEC => {
                 print!("DEC");
                 let data = self.read(operand, ReadSize::Byte) as u8;
-                let result = (data as i8 - 1) as u8;
+                let result = (data as i16 - 1) as u8;
                 self.bus.write_by_cpu(operand, result);
                 self.regs.p.zero = result == 0;
                 self.regs.p.negative = self.check_negative(&result);
             }
             Instruction::INX => {
                 print!("INX null\n : x:{:x}+1 ->", self.regs.x);
-                self.regs.x += 1;
+                self.regs.x = (self.regs.x as u16 + 1) as u8;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
                 print!(" x:{:x}", self.regs.x);
             }
             Instruction::DEX => {
                 print!("DEX null\n : x:{:x}-1 ->", self.regs.x);
-                self.regs.x = (self.regs.x as i8 - 1) as u8;
+                self.regs.x = (self.regs.x as i16 - 1) as u8;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
                 print!(" x:{:x}", self.regs.x);
             }
             Instruction::INY => {
                 print!("INY null\n : y:{:x}+1 ->", self.regs.y);
-                self.regs.y += 1;
+                self.regs.y = (self.regs.y as u16 + 1) as u8;
                 self.regs.p.zero = self.regs.y == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.y);
                 print!(" y:{:x}", self.regs.y);
             }
             Instruction::DEY => {
                 print!("DEY null\n : y:{:x}-1 ->", self.regs.y);
-                self.regs.y = if self.regs.y == 0xff { 1 } else { self.regs.y };
-                self.regs.y = (self.regs.y as i8 - 1) as u8;
+                self.regs.y = (self.regs.y as i16 - 1) as u8;
                 self.regs.p.zero = self.regs.y == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.y);
             }
