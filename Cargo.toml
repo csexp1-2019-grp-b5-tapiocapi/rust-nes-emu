@@ -9,9 +9,5 @@ edition = "2018"
 [dependencies]
 enum_primitive = "*"
 num-traits = "0.2"
-#opencv = {version = "0.17", default-features = false, features = ["opencv-41"]}
+opencv = {version = "0.17", default-features = false, features = ["opencv-41"]}
 bitflags = "1.0"
-wasm-bindgen = "0.2"
-
-[lib]
-crate-type = ["cdylib", "rlib"]

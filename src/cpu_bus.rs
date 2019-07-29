@@ -1,6 +1,6 @@
 use num_traits::FromPrimitive;
 
-//use crate::ppu;
+use crate::ppu;
 use crate::ram;
 use crate::rom;
 
@@ -15,7 +15,7 @@ pub struct CpuBus {
 }
 
 impl CpuBus {
-    pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom/*, ppu: ppu::Ppu*/) -> CpuBus {
+    pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom, ppu: ppu::Ppu) -> CpuBus {
         CpuBus {
             wram,
             prog_rom,
@@ -42,9 +42,8 @@ impl CpuBus {
             data
         } else if addr < 0x2008 {
             // PPU Register
-            //self.ppu
-             //   .read(ppu::RegType::from_u16(addr - 0x2000).unwrap())
-             0
+            self.ppu
+                .read(ppu::RegType::from_u16(addr - 0x2000).unwrap())
         } else if addr < 0x4000 {
             // PPU Mirror
             0
@@ -88,8 +87,8 @@ impl CpuBus {
             // WRAM Mirror
             self.wram.write(addr - 0x1800, data)
         } else if addr < 0x2008 {
-            //self.ppu
-             //   .write(ppu::RegType::from_u16(addr - 0x2000).unwrap(), data)
+            self.ppu
+                .write(ppu::RegType::from_u16(addr - 0x2000).unwrap(), data)
         } else if addr < 0x4020 && addr >= 0x4000 {
             //0x4014 -> dma
             //0x4016 -> joypad1

@@ -833,10 +833,18 @@ impl Cpu {
         }
 
         let opcode = self.fetch();
+        //if self.regs.pc < 0x8080 {
         let op_info = self.get_instruction_info(opcode);
+        //println!(
+        //    "{:x} {:x} {}",
+        //    opcode,
+        //    op_info.2,
+        //    if op_info.2 == 0 { "unknown" } else { "" }
+        //);
         let operand = self.fetch_operand(&op_info.1);
         self.exec(&op_info.0, &op_info.1, operand);
         println!(" opcode {:x} operand {:x}", opcode, operand);
+        //}
     }
 
     fn get_instruction_info(&self, opcode: u16) -> (Instruction, Addressing, u8) {
