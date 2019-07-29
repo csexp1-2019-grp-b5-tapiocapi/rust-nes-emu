@@ -165,6 +165,15 @@ impl Cpu {
         self.regs.pc = self.read(0xFFFC, ReadSize::Word);
     }
 
+    pub fn nmi_handler(&mut self) {
+        self.regs.p.break_mode = false;
+        self.push(((self.regs.pc & 0xFF00) >> 8) as u8);
+        self.push((self.regs.pc & 0x00FF) as u8);
+        self.push_status();
+        self.regs.p.interrupt = true;
+        self.regs.pc = self.read(0xFFFA, ReadSize::Word);
+    }
+
     fn read(&mut self, addr: u16, size: ReadSize) -> u16 {
         let bus = &mut self.bus;
         match size {
@@ -789,6 +798,10 @@ impl Cpu {
     }
 
     pub fn run(&mut self) {
+        if self.bus.nmi_flag {
+            self.nmi_handler();
+            self.bus.nmi_flag = false;
+        }
         let opcode = self.fetch();
         //if self.regs.pc < 0x8080 {
         let op_info = self.get_instruction_info(opcode);

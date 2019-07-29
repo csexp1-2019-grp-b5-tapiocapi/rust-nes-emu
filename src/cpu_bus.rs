@@ -8,6 +8,7 @@ pub struct CpuBus {
     wram: ram::Ram,
     prog_rom: rom::ProgramRom,
     ppu: ppu::Ppu,
+    pub nmi_flag: bool
 }
 
 impl CpuBus {
@@ -16,6 +17,7 @@ impl CpuBus {
             wram,
             prog_rom,
             ppu,
+            nmi_flag: false
         }
     }
 
@@ -32,7 +34,12 @@ impl CpuBus {
             self.wram.read(addr - 0x1000)
         } else if addr < 0x2000 {
             // WRAM Mirror
-            self.wram.read(addr - 0x1800)
+            let data = self.wram.read(addr - 0x1800);
+            self.nmi_flag = if (((data) & (1 << 7)) >> 7) == 1 {
+                true
+            } else {false};
+            println!("hogehoge {}", self.nmi_flag);
+            data
         } else if addr < 0x2008 {
             // PPU Register
             self.ppu

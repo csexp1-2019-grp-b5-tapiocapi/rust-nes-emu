@@ -139,7 +139,7 @@ impl Vram {
             }
             0x1000..=0x1FFF => {
                 /* pattern table 1 */
-                unimplemented!();
+                //unimplemented!();
             }
             0x2000..=0x23BF => {
                 /* name table 0 */
@@ -478,7 +478,7 @@ impl Ppu {
                 }
             }
             RegType::OAMADDR => {
-                unimplemented!();
+                //unimplemented!();
             }
             RegType::OAMDATA => {
                 unimplemented!();
