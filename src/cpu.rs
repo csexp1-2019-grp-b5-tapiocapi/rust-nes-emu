@@ -20,7 +20,7 @@ impl Default for Registers {
             a: 0x00,
             x: 0x00,
             y: 0x00,
-            sp: 0x01FD,
+            sp: 0x01FF,
             pc: 0x0000,
             p: Status {
                 negative: false,
@@ -540,7 +540,7 @@ impl Cpu {
                 self.push(((self.regs.pc & 0xFF00) >> 8) as u8);
                 self.push((self.regs.pc & 0xFF) as u8);
                 println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = self.regs.sp;
+                let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
                     println!("sp:{:x} val:{:x}", i, data);
@@ -551,7 +551,7 @@ impl Cpu {
             }
             Instruction::RTS => {
                 println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = self.regs.sp;
+                let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
                     println!("sp:{:x} val:{:x}", i, data);
@@ -788,7 +788,7 @@ impl Cpu {
             Instruction::PHA => {
                 self.push(self.regs.a);
                 println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = self.regs.sp;
+                let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
                     println!("sp:{:x} val:{:x}", i, data);
@@ -801,7 +801,7 @@ impl Cpu {
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
                 println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = self.regs.sp;
+                let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
                     println!("sp:{:x} val:{:x}", i, data);
