@@ -1,23 +1,23 @@
 use num_traits::FromPrimitive;
 
-use crate::ppu;
+//use crate::ppu;
 use crate::ram;
 use crate::rom;
 
 pub struct CpuBus {
     wram: ram::Ram,
     prog_rom: rom::ProgramRom,
-    ppu: ppu::Ppu,
-    pub nmi_flag: bool
+    //ppu: ppu::Ppu,
+    //pub nmi_flag: bool
 }
 
 impl CpuBus {
-    pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom, ppu: ppu::Ppu) -> CpuBus {
+    pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom/*, ppu: ppu::Ppu*/) -> CpuBus {
         CpuBus {
             wram,
-            prog_rom,
-            ppu,
-            nmi_flag: false
+            prog_rom//,
+            //ppu,
+            //nmi_flag: false
         }
     }
 
@@ -35,15 +35,16 @@ impl CpuBus {
         } else if addr < 0x2000 {
             // WRAM Mirror
             let data = self.wram.read(addr - 0x1800);
-            self.nmi_flag = if (((data) & (1 << 7)) >> 7) == 1 {
-                true
-            } else {false};
-            println!("hogehoge {}", self.nmi_flag);
+            //self.nmi_flag = if (((data) & (1 << 7)) >> 7) == 1 {
+                //true
+            //} else {false};
+            //println!("hogehoge {}", self.nmi_flag);
             data
         } else if addr < 0x2008 {
             // PPU Register
-            self.ppu
-                .read(ppu::RegType::from_u16(addr - 0x2000).unwrap())
+            //self.ppu
+             //   .read(ppu::RegType::from_u16(addr - 0x2000).unwrap())
+             0
         } else if addr < 0x4000 {
             // PPU Mirror
             0
@@ -87,8 +88,8 @@ impl CpuBus {
             // WRAM Mirror
             self.wram.write(addr - 0x1800, data)
         } else if addr < 0x2008 {
-            self.ppu
-                .write(ppu::RegType::from_u16(addr - 0x2000).unwrap(), data)
+            //self.ppu
+             //   .write(ppu::RegType::from_u16(addr - 0x2000).unwrap(), data)
         } else if addr < 0x4020 && addr >= 0x4000 {
             //0x4014 -> dma
             //0x4016 -> joypad1
