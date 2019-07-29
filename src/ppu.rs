@@ -2,6 +2,7 @@
 
 use crate::nes;
 use crate::rom::CharacterRom;
+use crate::cpu_bus::NMI_INT;
 use bitflags::bitflags;
 use enum_primitive::*;
 
@@ -586,6 +587,10 @@ impl Ppu {
     pub fn write(&mut self, regtype: RegType, data: u8) {
         println!("PPU: write: {:?}: {:x}", regtype, data);
         self.last_written = data;
+
+        if self.ctrlreg.generate_nmi() {
+            *NMI_INT.borrow_mut() = true;
+        }
 
         match regtype {
             RegType::PPUCTRL => {

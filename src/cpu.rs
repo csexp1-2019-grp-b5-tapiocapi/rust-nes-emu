@@ -825,10 +825,13 @@ impl Cpu {
     }
 
     pub fn run(&mut self) {
-        //if self.bus.nmi_flag {
-        //    self.nmi_handler();
-        //    self.bus.nmi_flag = false;
-        //}
+        let nmi_int = *cpu_bus::NMI_INT.borrow();
+        if nmi_int {
+            println!("==NMI_INT==");
+            self.nmi_handler();
+            *cpu_bus::NMI_INT.borrow_mut() = false;
+        }
+
         let opcode = self.fetch();
         let op_info = self.get_instruction_info(opcode);
         let operand = self.fetch_operand(&op_info.1);

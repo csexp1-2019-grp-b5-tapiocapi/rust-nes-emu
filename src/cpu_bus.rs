@@ -4,20 +4,22 @@ use num_traits::FromPrimitive;
 use crate::ram;
 use crate::rom;
 
+use std::cell::RefCell;
+
+pub const NMI_INT: RefCell<bool> = RefCell::new(false);
+
 pub struct CpuBus {
     wram: ram::Ram,
     prog_rom: rom::ProgramRom,
-    //ppu: ppu::Ppu,
-    //pub nmi_flag: bool
+    ppu: ppu::Ppu,
 }
 
 impl CpuBus {
     pub fn new(wram: ram::Ram, prog_rom: rom::ProgramRom/*, ppu: ppu::Ppu*/) -> CpuBus {
         CpuBus {
             wram,
-            prog_rom//,
-            //ppu,
-            //nmi_flag: false
+            prog_rom,
+            ppu,
         }
     }
 
@@ -35,10 +37,8 @@ impl CpuBus {
         } else if addr < 0x2000 {
             // WRAM Mirror
             let data = self.wram.read(addr - 0x1800);
-            //self.nmi_flag = if (((data) & (1 << 7)) >> 7) == 1 {
-                //true
-            //} else {false};
-            //println!("hogehoge {}", self.nmi_flag);
+            *NMI_INT.borrow_mut() = (((data) & (1 << 7)) >> 7) == 1;
+            println!("hogehoge {}", *NMI_INT.borrow());
             data
         } else if addr < 0x2008 {
             // PPU Register
