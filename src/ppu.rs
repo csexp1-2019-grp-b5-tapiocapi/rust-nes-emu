@@ -5,6 +5,73 @@ use crate::rom::CharacterRom;
 use bitflags::bitflags;
 use enum_primitive::*;
 
+#[rustfmt::skip]
+const PALETTE: [u8; 64*3] =
+    [124,124,124,
+    0,0,252,
+    0,0,188,
+    68,40,188,
+    148,0,132,
+    168,0,32,
+    168,16,0,
+    136,20,0,
+    80,48,0,
+    0,120,0,
+    0,104,0,
+    0,88,0,
+    0,64,88,
+    0,0,0,
+    0,0,0,
+    0,0,0,
+    188,188,188,
+    0,120,248,
+    0,88,248,
+    104,68,252,
+    216,0,204,
+    228,0,88,
+    248,56,0,
+    228,92,16,
+    172,124,0,
+    0,184,0,
+    0,168,0,
+    0,168,68,
+    0,136,136,
+    0,0,0,
+    0,0,0,
+    0,0,0,
+    248,248,248,
+    60,188,252,
+    104,136,252,
+    152,120,248,
+    248,120,248,
+    248,88,152,
+    248,120,88,
+    252,160,68,
+    248,184,0,
+    184,248,24,
+    88,216,84,
+    88,248,152,
+    0,232,216,
+    120,120,120,
+    0,0,0,
+    0,0,0,
+    252,252,252,
+    164,228,252,
+    184,184,248,
+    216,184,248,
+    248,184,248,
+    248,164,192,
+    240,208,176,
+    252,224,168,
+    248,216,120,
+    216,248,120,
+    184,248,184,
+    184,248,216,
+    0,252,252,
+    248,216,248,
+    0,0,0,
+    0,0,0];
+
 pub const SPRITE_WIDTH: usize = 8;
 pub const SPRITE_HEIGHT: usize = 8;
 
@@ -17,10 +84,10 @@ impl Sprite {
     fn new(chr: &[u8]) -> Sprite {
         let mut data = [[0u8; SPRITE_WIDTH]; SPRITE_HEIGHT];
 
-        for i in 0..16 {
+        for i in 0..8 {
             for j in 0..8 {
-                let k = 7 - j;
-                data[i % 8][j] += (chr[i] & (1 << k)) >> k;
+                data[i][j] = ((chr[i] & (0b1000_0000 >> j)) != 0) as u8
+                    | ((((chr[i + 8] & (0b1000_0000 >> j)) != 0) as u8) << 1);
             }
         }
 
@@ -28,10 +95,22 @@ impl Sprite {
     }
 }
 
+fn write_sprite(mat: &mut opencv::core::Mat, sprite: &Sprite) {
+    for j in 0..8 {
+        for k in 0..8 {
+            let npalette = sprite.data[j as usize][k as usize] as usize * 3;
+            *mat.at_2d_mut(j, k).unwrap() = opencv::core::Vec3::from([
+                PALETTE[npalette],
+                PALETTE[npalette + 1],
+                PALETTE[npalette + 2],
+            ]);
+        }
+    }
+}
+
 struct Vram {
-    mem: Vec<u8>,
-    vbuf: opencv::core::Mat,
-    sprites: Vec<Sprite>,
+    pub mem: Vec<u8>,
+    pub chr_rom: CharacterRom,
 }
 
 impl Vram {
@@ -41,13 +120,10 @@ impl Vram {
     const VRAM_SIZE: usize = 0x2000;
     const VRAM_START: usize = 0x2000;
 
-    fn new(chr_rom: &CharacterRom) -> Self {
+    fn new(chr_rom: CharacterRom) -> Self {
         let vram = Self {
             mem: vec![0; Self::VRAM_SIZE],
-            vbuf: unsafe {
-                opencv::core::Mat::new_rows_cols(240, 256, opencv::core::CV_8UC1).unwrap()
-            },
-            sprites: chr_rom.data.chunks(16).map(Sprite::new).collect(),
+            chr_rom,
         };
 
         vram
@@ -57,74 +133,55 @@ impl Vram {
         self.mem = vec![0; Self::VRAM_SIZE];
     }
 
-    fn show(&mut self) {
-        self.update_whole_vbuf();
-
-        let mut screen = opencv::core::Mat::new().unwrap();
-
-        opencv::imgproc::resize(
-            &self.vbuf,
-            &mut screen,
-            opencv::core::Size::new(1024, 1024),
-            0.0,
-            0.0,
-            0,
-        )
-        .unwrap();
-
-        opencv::highgui::imshow(nes::CV_WINDOW_TITLE, &screen).unwrap();
-
-        /*
-         * waiting for 1 millisec sometimes causes incomplete drawing
-         */
-        opencv::highgui::wait_key(100).unwrap();
-    }
-
     fn read(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x0FFF => {
+            0x0000..=0x1FFF => self.chr_rom.data[addr as usize],
+            /*0x0000..=0x0FFF => {
                 /* pattern table 0 */
-                unimplemented!();
             }
             0x1000..=0x1FFF => {
                 /* pattern table 1 */
-                unimplemented!();
-            }
-            0x2000..=0x23BF => {
+            }*/
+            0x2000..=0x2FFF => self.mem[addr as usize - Vram::VRAM_START],
+            /*0x2000..=0x23BF => {
                 /* name table 0 */
-                self.mem[addr as usize - Vram::VRAM_START]
             }
             0x23C0..=0x23FF => {
                 /* attr table 0 */
-                unimplemented!();
             }
             0x2400..=0x27BF => {
                 /* name table 1 */
-                unimplemented!();
             }
             0x27C0..=0x27FF => {
                 /* attr table 1 */
-                unimplemented!();
             }
             0x2800..=0x2BBF => {
                 /* name table 2 */
-                unimplemented!();
             }
             0x2BC0..=0x2BFF => {
                 /* attr table 2 */
-                unimplemented!();
             }
             0x2C00..=0x2FBF => {
                 /* name table 3 */
-                unimplemented!();
             }
             0x2FC0..=0x2FFF => {
                 /* attr table 3 */
-                unimplemented!();
-            }
+            }*/
             0x3000..=0x3EFF => {
                 /* mirror of 0x2000 ..= 0x2EFF */
                 self.read(addr - 0x1000)
+            }
+            0x3F00..=0x3F0F => {
+                /* background palette table */
+                unimplemented!();
+            }
+            0x3F10..=0x3F1F => {
+                /* sprite palette table */
+                unimplemented!();
+            }
+            0x3F20..=0x3FFF => {
+                /* mirror of 0x3F00-0x3F1F */
+                panic!("VRAM: read: accessing mirroring area of palette tables");
             }
             _ => panic!("VRAM: Invalid read at 0x{:X}", addr),
         }
@@ -133,115 +190,59 @@ impl Vram {
     fn write(&mut self, addr: u16, data: u8) {
         println!("VRAM: write 0x{:x} at 0x{:x}", data, addr);
         match addr {
-            0x0000..=0x0FFF => {
+            0x0000..=0x1FFF => {
+                self.chr_rom.data[addr as usize] = data;
+            }
+            /*0x0000..=0x0FFF => {
                 /* pattern table 0 */
-                //unimplemented!();
             }
             0x1000..=0x1FFF => {
                 /* pattern table 1 */
-                unimplemented!();
+            }*/
+            0x2000..=0x2FFF => {
+                self.mem[addr as usize - Vram::VRAM_START] = data;
             }
-            0x2000..=0x23BF => {
+            /*0x2000..=0x23BF => {
                 /* name table 0 */
-                let pos = addr as usize - Vram::VRAM_START;
-                self.mem[pos] = data;
             }
             0x23C0..=0x23FF => {
                 /* attr table 0 */
-                //unimplemented!();
             }
             0x2400..=0x27BF => {
                 /* name table 1 */
-                //unimplemented!();
             }
             0x27C0..=0x27FF => {
                 /* attr table 1 */
-                //unimplemented!();
             }
             0x2800..=0x2BBF => {
                 /* name table 2 */
-                //unimplemented!();
             }
             0x2BC0..=0x2BFF => {
                 /* attr table 2 */
-                //unimplemented!();
             }
             0x2C00..=0x2FBF => {
                 /* name table 3 */
-                //unimplemented!();
             }
             0x2FC0..=0x2FFF => {
                 /* attr table 3 */
-                //unimplemented!();
-            }
+            }*/
             0x3000..=0x3EFF => {
                 /* mirror of 0x2000 ..= 0x2EFF */
                 self.write(addr - 0x1000, data);
             }
             0x3F00..=0x3F0F => {
-                /* background palette */
-                //unimplemented!();
+                /* background palette table */
+                println!("VRAM: write: bg palette table");
             }
             0x3F10..=0x3F1F => {
-                /* sprite palette */
-                //unimplemented!();
+                /* sprite palette table */
+                println!("VRAM: write: sprite palette table");
             }
             0x3F20..=0x3FFF => {
                 /* mirror of 0x3F00-0x3F1F */
-                //unimplemented!();
+                panic!("VRAM: write: accessing mirroring area of palette tables");
             }
             _ => panic!("VRAM: Invalid write at 0x{:X}", addr),
-        }
-    }
-
-    fn write_sprite(mat: &mut opencv::core::Mat, sprites: &[Sprite], sprite: usize) {
-        for j in 0..8 {
-            for k in 0..8 {
-                *mat.at_2d_mut(j, k).unwrap() = sprites[sprite].data[j as usize][k as usize] * 63;
-            }
-        }
-    }
-
-    fn update_vbuf(&mut self, addr: u16) {
-        let addr = addr as usize;
-
-        let mut sprite_roi = opencv::core::Mat::roi(
-            &self.vbuf,
-            opencv::core::Rect::new(
-                ((addr % 32) * SPRITE_WIDTH) as i32,
-                ((addr / 32) * SPRITE_HEIGHT) as i32,
-                SPRITE_WIDTH as i32,
-                SPRITE_HEIGHT as i32,
-            ),
-        )
-        .unwrap();
-
-        let sprite = self.mem[addr] as usize;
-        Self::write_sprite(&mut sprite_roi, &self.sprites, sprite);
-    }
-
-    fn update_whole_vbuf(&mut self) {
-        for (i, sprite) in (&self.mem[0..960]).iter().enumerate() {
-            //println!(
-            //    "get_mat: i={} sprite={}: ({}, {})",
-            //    i,
-            //    sprite,
-            //    ((i % 32) * SPRITE_WIDTH) as i32,
-            //    ((i / 32) * SPRITE_HEIGHT) as i32
-            //);
-
-            let mut roi = opencv::core::Mat::roi(
-                &self.vbuf,
-                opencv::core::Rect::new(
-                    ((i % 32) * SPRITE_WIDTH) as i32,
-                    ((i / 32) * SPRITE_HEIGHT) as i32,
-                    SPRITE_WIDTH as i32,
-                    SPRITE_HEIGHT as i32,
-                ),
-            )
-            .unwrap();
-
-            Self::write_sprite(&mut roi, &self.sprites, *sprite as usize);
         }
     }
 }
@@ -420,22 +421,139 @@ bitflags! {
     }
 }
 
+#[derive(Debug)]
+struct OamEntry {
+    y: u8,
+    tile: u8,
+    attr: u8,
+    x: u8,
+}
+
+impl OamEntry {
+    fn new(entry: &[u8]) -> OamEntry {
+        assert_eq!(entry.len(), 4);
+        OamEntry {
+            y: entry[0],
+            tile: entry[1],
+            attr: entry[2],
+            x: entry[3],
+        }
+    }
+}
+
 pub struct Ppu {
-    ppuptr: PpuPtr,
     ctrlreg: PpuCtrlReg,
     mask: PpuMask,
+    ppuptr: PpuPtr,
+    oamptr: u8,
+    sprite_ram: Vec<u8>,
+    vbuf: opencv::core::Mat,
     vram: Vram,
     last_written: u8,
 }
 
 impl Ppu {
-    pub fn new(chr_rom: &CharacterRom) -> Ppu {
+    pub fn new(chr_rom: CharacterRom) -> Ppu {
         Ppu {
-            ppuptr: PpuPtr::new(),
             ctrlreg: PpuCtrlReg::new(),
-            mask: PpuMask::empty(),
+            /* for the lazy ROMs not initializing PPUMASK */
+            mask: PpuMask::SHOW_ALL,
+            ppuptr: PpuPtr::new(),
+            oamptr: 0,
+            sprite_ram: vec![0; 256],
+            vbuf: unsafe {
+                opencv::core::Mat::new_rows_cols(240, 256, opencv::core::CV_8UC3).unwrap()
+            },
             vram: Vram::new(chr_rom),
             last_written: 0,
+        }
+    }
+
+    fn show(&mut self) {
+        if !self.mask.intersects(PpuMask::SHOW_ALL) {
+            return;
+        }
+
+        self.update_whole_vbuf();
+
+        let mut screen = opencv::core::Mat::new().unwrap();
+
+        opencv::imgproc::resize(
+            &self.vbuf,
+            &mut screen,
+            opencv::core::Size::new(1024, 1024),
+            0.0,
+            0.0,
+            0,
+        )
+        .unwrap();
+
+        opencv::highgui::imshow(nes::CV_WINDOW_TITLE, &screen).unwrap();
+
+        /*
+         * waiting for 1 millisec sometimes causes incomplete drawing
+         */
+        opencv::highgui::wait_key(100).unwrap();
+    }
+
+    fn update_whole_vbuf(&mut self) {
+        let ntbase = self.ctrlreg.base_nametable_addr() as usize - Vram::VRAM_START;
+        let bg_ptrn_tab_addr = self.ctrlreg.bg_pattern_table_addr();
+        let sprite_ptrn_tab_addr = self.ctrlreg.sprite_pattern_table_addr();
+
+        for (i, sprite_index) in (&self.vram.mem[ntbase..(ntbase + 960)]).iter().enumerate() {
+            //println!(
+            //    "get_mat: i={} sprite={}: ({}, {})",
+            //    i,
+            //    sprite,
+            //    ((i % 32) * SPRITE_WIDTH) as i32,
+            //    ((i / 32) * SPRITE_HEIGHT) as i32
+            //);
+
+            let mut roi = opencv::core::Mat::roi(
+                &self.vbuf,
+                opencv::core::Rect::new(
+                    ((i % 32) * SPRITE_WIDTH) as i32,
+                    ((i / 32) * SPRITE_HEIGHT) as i32,
+                    SPRITE_WIDTH as i32,
+                    SPRITE_HEIGHT as i32,
+                ),
+            )
+            .unwrap();
+
+            let bg_addr = bg_ptrn_tab_addr + (*sprite_index as u16) * 16;
+            let sprite: Vec<u8> = (bg_addr..(bg_addr + 16))
+                .map(|addr| self.vram.read(addr))
+                .collect();
+            assert_eq!(sprite.len(), 16);
+
+            write_sprite(&mut roi, &Sprite::new(&sprite));
+        }
+
+        for i in (0..255).step_by(4) {
+            let entry = OamEntry::new(&self.sprite_ram[i..(i + 4)]);
+            if entry.y == 0 {
+                continue;
+            }
+
+            let mut roi = opencv::core::Mat::roi(
+                &self.vbuf,
+                opencv::core::Rect::new(
+                    entry.x as i32 * SPRITE_WIDTH as i32,
+                    entry.y as i32 * SPRITE_HEIGHT as i32,
+                    SPRITE_WIDTH as i32,
+                    SPRITE_HEIGHT as i32,
+                ),
+            )
+            .unwrap();
+
+            let sprite_addr = sprite_ptrn_tab_addr + (entry.tile as u16) * 16;
+            let sprite: Vec<u8> = (sprite_addr..(sprite_addr + 16))
+                .map(|addr| self.vram.read(addr))
+                .collect();
+            assert_eq!(sprite.len(), 16);
+
+            write_sprite(&mut roi, &Sprite::new(&sprite));
         }
     }
 
@@ -447,7 +565,10 @@ impl Ppu {
                 0b1000_0000 | (self.last_written & 0b0001_1111)
             }
             RegType::OAMDATA => {
-                unimplemented!();
+                let addr = self.oamptr;
+                self.oamptr = (self.oamptr as u16 + 1) as u8;
+
+                self.sprite_ram[addr as usize]
             }
             RegType::PPUDATA => {
                 let addr = if self.ctrlreg.vram_addr_increment() {
@@ -469,19 +590,39 @@ impl Ppu {
         match regtype {
             RegType::PPUCTRL => {
                 self.ctrlreg.set(data);
+                println!(
+                    "PPUCTRL: write: sprite pattern table addr: 0x{:x}",
+                    self.ctrlreg.sprite_pattern_table_addr()
+                );
+                println!(
+                    "PPUCTRL: write: bg pattern table addr: 0x{:x}",
+                    self.ctrlreg.bg_pattern_table_addr()
+                );
             }
             RegType::PPUMASK => {
                 /* use unwrap() cuz all bits correspond to flags */
                 self.mask = PpuMask::from_bits(data).unwrap();
-                if self.mask.intersects(PpuMask::SHOW_ALL) {
-                    self.vram.show();
-                }
+                self.show();
             }
             RegType::OAMADDR => {
-                unimplemented!();
+                self.oamptr = data;
             }
             RegType::OAMDATA => {
-                unimplemented!();
+                let addr = self.oamptr;
+                self.oamptr = (self.oamptr as u16 + 1) as u8;
+
+                let addr = addr as usize;
+                self.sprite_ram[addr] = data;
+
+                let nsprite = addr / 4;
+                let sprite_begin = nsprite * 4;
+
+                println!(
+                    "OAMDATA: write: {:?}",
+                    OamEntry::new(&self.sprite_ram[sprite_begin..(sprite_begin + 4)])
+                );
+
+                self.show();
             }
             RegType::PPUSCROLL => {
                 //unimplemented!();
@@ -497,9 +638,7 @@ impl Ppu {
                 };
 
                 self.vram.write(addr, data);
-                if self.mask.intersects(PpuMask::SHOW_ALL) {
-                    self.vram.show();
-                }
+                self.show();
             }
             _ => panic!("PPU: Trying to write read-only register: {:?}", regtype),
         }
@@ -517,9 +656,9 @@ fn sprite_test() {
     //        .unwrap();
 
     let (_, chr_rom) = rom::load(buffer).unwrap();
-    let ppu = Ppu::new(&chr_rom);
-
     println!("chr rom size: {}", chr_rom.data.len());
+
+    let ppu = Ppu::new(chr_rom);
 
     let title = "Sprite";
 
@@ -527,7 +666,7 @@ fn sprite_test() {
     let length = 24;
 
     let sprites_img = unsafe {
-        opencv::core::Mat::new_rows_cols(length * count, length * count, opencv::core::CV_8UC1)
+        opencv::core::Mat::new_rows_cols(length * count, length * count, opencv::core::CV_8UC3)
             .unwrap()
     };
 
@@ -541,7 +680,7 @@ fn sprite_test() {
             let sprite = ppu.vram.sprites[index];
 
             let mut img =
-                unsafe { opencv::core::Mat::new_rows_cols(8, 8, opencv::core::CV_8UC1).unwrap() };
+                unsafe { opencv::core::Mat::new_rows_cols(8, 8, opencv::core::CV_8UC3).unwrap() };
             for l in 0..8 {
                 for m in 0..8 {
                     *img.at_2d_mut(l, m).unwrap() = sprite.data[l as usize][m as usize] * 63;
@@ -565,7 +704,7 @@ fn sprite_test() {
                 opencv::core::Rect::new(j * length, i * length, length, length),
             )
             .unwrap();
-            scaled.copy_to(&mut roi);
+            scaled.copy_to(&mut roi).unwrap();
         }
     }
 

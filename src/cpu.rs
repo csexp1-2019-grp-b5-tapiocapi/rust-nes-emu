@@ -269,13 +269,13 @@ impl Cpu {
         }
     }
 
-    fn check_overflow(&mut self, op: &Option<u8>) -> bool{
+    fn check_overflow(&mut self, op: &Option<u8>) -> bool {
         match op {
             Some(_) => {
                 self.regs.p.carry = true;
                 true
             }
-            None => true
+            None => true,
         }
     }
 
@@ -306,7 +306,7 @@ impl Cpu {
                 let carry = if self.regs.p.carry { 0 } else { 1 };
                 match addressing {
                     Addressing::Immediate => {
-                        let result = self.regs.a.checked_sub(operand as u8 + carry) ;
+                        let result = self.regs.a.checked_sub(operand as u8 + carry);
                         self.regs.p.overflow = self.check_overflow(&result);
                     }
                     _ => {
@@ -374,8 +374,7 @@ impl Cpu {
                         self.regs.a = ((self.regs.a as i8) << 1) as u8;
                     }
                     _ => {
-                        self.regs.p.carry =
-                            (((operand as u8) & (1 << 7)) >> 7) != 0;
+                        self.regs.p.carry = (((operand as u8) & (1 << 7)) >> 7) != 0;
                         self.regs.a = ((operand as i8) << 1) as u8;
                     }
                 }
@@ -405,8 +404,7 @@ impl Cpu {
                         self.regs.a = self.regs.a.rotate_left(1);
                     }
                     _ => {
-                        self.regs.p.carry = 
-                            (((operand as u8) & (1 << 7)) >> 7) != 0;
+                        self.regs.p.carry = (((operand as u8) & (1 << 7)) >> 7) != 0;
                         self.regs.a = (operand as u8).rotate_left(1);
                     }
                 }
@@ -519,8 +517,7 @@ impl Cpu {
                 let sp = self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
-                    println!("sp:{:x} val:{:x}", 
-                             i, data);
+                    println!("sp:{:x} val:{:x}", i, data);
                 }
                 println!("<<<<<<<<<<<<<<<<<<<");
                 self.regs.pc = operand;
@@ -531,8 +528,7 @@ impl Cpu {
                 let sp = self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
-                    println!("sp:{:x} val:{:x}", 
-                             i, data);
+                    println!("sp:{:x} val:{:x}", i, data);
                 }
                 let lower = self.pop() as u16;
                 let upper = self.pop() as u16;

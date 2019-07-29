@@ -46,6 +46,7 @@ pub struct CharacterRom {
 
 impl CharacterRom {
     pub fn new(data: &[u8]) -> CharacterRom {
+        println!("Character ROM size: 0x{:x}", data.len());
         CharacterRom {
             data: data.to_vec(),
         }
