@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
+use crate::cpu_bus::NMI_INT;
 use crate::nes;
 use crate::rom::CharacterRom;
-use crate::cpu_bus::NMI_INT;
 use bitflags::bitflags;
 use enum_primitive::*;
 
@@ -112,6 +112,7 @@ fn write_sprite(mat: &mut opencv::core::Mat, sprite: &Sprite) {
 struct Vram {
     pub mem: Vec<u8>,
     pub chr_rom: CharacterRom,
+    chr_ram: Vec<u8>,
 }
 
 impl Vram {
@@ -122,9 +123,15 @@ impl Vram {
     const VRAM_START: usize = 0x2000;
 
     fn new(chr_rom: CharacterRom) -> Self {
+        let chr_len = chr_rom.data.len();
         let vram = Self {
             mem: vec![0; Self::VRAM_SIZE],
             chr_rom,
+            chr_ram: if chr_len == 0 {
+                vec![0; 0x1FFF]
+            } else {
+                Vec::new()
+            },
         };
 
         vram
@@ -136,7 +143,13 @@ impl Vram {
 
     fn read(&self, addr: u16) -> u8 {
         match addr {
-            0x0000..=0x1FFF => self.chr_rom.data[addr as usize],
+            0x0000..=0x1FFF => {
+                if self.chr_rom.data.len() == 0 {
+                    self.chr_ram[addr as usize]
+                } else {
+                    self.chr_rom.data[addr as usize]
+                }
+            }
             /*0x0000..=0x0FFF => {
                 /* pattern table 0 */
             }
@@ -192,7 +205,11 @@ impl Vram {
         println!("VRAM: write 0x{:x} at 0x{:x}", data, addr);
         match addr {
             0x0000..=0x1FFF => {
-                self.chr_rom.data[addr as usize] = data;
+                if self.chr_rom.data.len() == 0 {
+                    self.chr_ram[addr as usize] = data;
+                } else {
+                    self.chr_rom.data[addr as usize] = data;
+                }
             }
             /*0x0000..=0x0FFF => {
                 /* pattern table 0 */

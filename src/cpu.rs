@@ -194,7 +194,7 @@ impl Cpu {
     }
 
     fn push_status(&mut self) {
-        let mut status = if self.regs.p.negative { 1 } else { 0 }; 
+        let mut status = if self.regs.p.negative { 1 } else { 0 };
         status <<= 1;
         status |= if self.regs.p.overflow { 1 } else { 0 };
         status <<= 1;
@@ -305,7 +305,7 @@ impl Cpu {
 
         match result {
             Some(res) => (res as u8, false),
-            None => ((reg as i16 + operand as i16 + carry as i16) as u8, true)
+            None => ((reg as i16 + operand as i16 + carry as i16) as u8, true),
         }
     }
 
@@ -315,7 +315,7 @@ impl Cpu {
 
         match result {
             Some(res) => (res as u8, false),
-            None => ((reg as i16 - operand as i16 - carry as i16) as u8, true)
+            None => ((reg as i16 - operand as i16 - carry as i16) as u8, true),
         }
     }
 
