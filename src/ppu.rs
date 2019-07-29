@@ -490,11 +490,6 @@ impl Ppu {
         .unwrap();
 
         opencv::highgui::imshow(nes::CV_WINDOW_TITLE, &screen).unwrap();
-
-        /*
-         * waiting for 1 millisec sometimes causes incomplete drawing
-         */
-        opencv::highgui::wait_key(100).unwrap();
     }
 
     fn update_whole_vbuf(&mut self) {
