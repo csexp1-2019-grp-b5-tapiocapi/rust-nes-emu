@@ -172,6 +172,7 @@ impl Cpu {
         self.push_status();
         self.regs.p.interrupt = true;
         self.regs.pc = self.read(0xFFFA, ReadSize::Word);
+        println!("NMIdesu {:x}", self.regs.pc);
     }
 
     fn read(&mut self, addr: u16, size: ReadSize) -> u16 {
@@ -193,25 +194,41 @@ impl Cpu {
     }
 
     fn push_status(&mut self) {
-        self.push(if self.regs.p.negative { 1 } else { 0 });
-        self.push(if self.regs.p.overflow { 1 } else { 0 });
-        self.push(1);
-        self.push(if self.regs.p.break_mode { 1 } else { 0 });
-        self.push(if self.regs.p.decimal { 1 } else { 0 });
-        self.push(if self.regs.p.interrupt { 1 } else { 0 });
-        self.push(if self.regs.p.zero { 1 } else { 0 });
-        self.push(if self.regs.p.negative { 1 } else { 0 });
+        let mut status = if self.regs.p.negative { 1 } else { 0 }; 
+        status <<= 1;
+        status |= if self.regs.p.overflow { 1 } else { 0 };
+        status <<= 1;
+        status |= if self.regs.p.reserved { 1 } else { 0 };
+        status <<= 1;
+        status |= if self.regs.p.break_mode { 1 } else { 0 };
+        status <<= 1;
+        status |= if self.regs.p.decimal { 1 } else { 0 };
+        status <<= 1;
+        status |= if self.regs.p.interrupt { 1 } else { 0 };
+        status <<= 1;
+        status |= if self.regs.p.zero { 1 } else { 0 };
+        status <<= 1;
+        status |= if self.regs.p.carry { 1 } else { 0 };
+        self.push(status);
     }
 
     fn pop_status(&mut self) {
-        self.regs.p.negative = if self.pop() == 0 { false } else { true };
-        self.regs.p.overflow = if self.pop() == 0 { false } else { true };
-        self.regs.p.reserved = self.pop() == 1;
-        self.regs.p.break_mode = if self.pop() == 0 { false } else { true };
-        self.regs.p.decimal = if self.pop() == 0 { false } else { true };
-        self.regs.p.interrupt = if self.pop() == 0 { false } else { true };
-        self.regs.p.zero = if self.pop() == 0 { false } else { true };
-        self.regs.p.negative = if self.pop() == 0 { false } else { true };
+        let mut status = self.pop();
+        self.regs.p.carry = (status & 0x1) == 1;
+        status >>= 1;
+        self.regs.p.zero = (status & 0x1) == 1;
+        status >>= 1;
+        self.regs.p.interrupt = (status & 0x1) == 1;
+        status >>= 1;
+        self.regs.p.decimal = (status & 0x1) == 1;
+        status >>= 1;
+        self.regs.p.break_mode = (status & 0x1) == 1;
+        status >>= 1;
+        self.regs.p.reserved = (status & 0x1) == 1;
+        status >>= 1;
+        self.regs.p.overflow = (status & 0x1) == 1;
+        status >>= 1;
+        self.regs.p.negative = (status & 0x1) == 1;
     }
 
     fn pop(&mut self) -> u8 {
@@ -702,7 +719,7 @@ impl Cpu {
                 };
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
-                print!(" : {} -> X", self.regs.x);
+                print!(" : {:x} -> X", self.regs.x);
             }
             Instruction::LDY => {
                 print!("LDY ");
@@ -736,7 +753,7 @@ impl Cpu {
                 self.regs.x = self.regs.a;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
-                print!("TAX");
+                print!("TAX null: A:{:x} -> X", self.regs.a);
             }
             Instruction::TXA => {
                 self.regs.a = self.regs.x;
@@ -770,12 +787,26 @@ impl Cpu {
             }
             Instruction::PHA => {
                 self.push(self.regs.a);
+                println!("<<<<<<<<<<<<<<<<<<<");
+                let sp = self.regs.sp;
+                for i in sp..0x0200 {
+                    let data = self.read(i, ReadSize::Byte);
+                    println!("sp:{:x} val:{:x}", i, data);
+                }
+                println!("<<<<<<<<<<<<<<<<<<<");
                 print!("PHA a:{:x} -> stack:{:x}", self.regs.a, self.regs.sp);
             }
             Instruction::PLA => {
                 self.regs.a = self.pop();
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
+                println!("<<<<<<<<<<<<<<<<<<<");
+                let sp = self.regs.sp;
+                for i in sp..0x0200 {
+                    let data = self.read(i, ReadSize::Byte);
+                    println!("sp:{:x} val:{:x}", i, data);
+                }
+                println!("<<<<<<<<<<<<<<<<<<<");
                 print!("PLA stack:{:x} -> A:{:x}", self.regs.sp, self.regs.a);
             }
             Instruction::PHP => {
@@ -1025,24 +1056,24 @@ impl Cpu {
             0xEA => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
             /* Opecodes below isn't not official */
             // NOP
-            0x1A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x3A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x5A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x7A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0xDA => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0xFA => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x02 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x12 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x22 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x32 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x42 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x52 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x62 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x72 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0x92 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0xB2 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0xD2 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            0xF2 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x1A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x3A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x5A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x7A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0xDA => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0xFA => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x02 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x12 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x22 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x32 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x42 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x52 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x62 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x72 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0x92 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0xB2 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0xD2 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
+            //0xF2 => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
             //NOPD
             //0x => (Instruction::NOPD, Addressing::Implied, CYCLE[index]),
             //0x => (Instruction::NOPD, Addressing::Implied, CYCLE[index]),
