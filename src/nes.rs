@@ -31,6 +31,8 @@ impl Nes {
     }
 
     pub fn start(&mut self) {
+        opencv::highgui::start_window_thread().unwrap();
+        //pirintln!("{:?}", self.game_rom);
         self.cpu.reset();
         loop {
             self.cpu.run();
