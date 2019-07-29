@@ -295,52 +295,55 @@ impl Cpu {
         }
     }
 
-    fn check_overflow(&mut self, op: &Option<u8>) -> bool {
-        match op {
-            Some(_) => {
-                self.regs.p.carry = true;
-                true
-            }
-            None => true,
+    fn check_negative(&self, register: &u8) -> bool {
+        (register & (1 << 7)) >> 7 == 1
+    }
+
+    fn checked_add(reg: u8, operand: u8, carry: bool) -> (u8, bool) {
+        let carry = if carry { 1 } else { 0 };
+        let result = (reg as i8).checked_add(operand as i8 + carry);
+
+        match result {
+            Some(res) => (res as u8, false),
+            None => ((reg as i16 + operand as i16 + carry as i16) as u8, true)
         }
     }
 
-    fn check_negative(&self, register: &u8) -> bool {
-        (register & (1 << 7)) >> 7 == 1
+    fn checked_sub(reg: u8, operand: u8, carry: bool) -> (u8, bool) {
+        let carry = if carry { 1 } else { 0 };
+        let result = (reg as i8).checked_sub(operand as i8 + carry);
+
+        match result {
+            Some(res) => (res as u8, false),
+            None => ((reg as i16 - operand as i16 - carry as i16) as u8, true)
+        }
     }
 
     fn exec(&mut self, instruction: &Instruction, addressing: &Addressing, operand: u16) {
         match instruction {
             Instruction::ADC => {
-                match addressing {
-                    Addressing::Immediate => {
-                        let carry = if self.regs.p.carry { 1 } else { 0 };
-                        let result = self.regs.a.checked_add(operand as u8 + carry);
-                        self.regs.p.overflow = self.check_overflow(&result);
-                    }
-                    _ => {
-                        let data = self.read(operand, ReadSize::Byte) as u8;
-                        let carry = if self.regs.p.carry { 1 } else { 0 };
-                        let result = self.regs.a.checked_add(data + carry);
-                        self.regs.p.overflow = self.check_overflow(&result);
-                    }
-                }
+                let data = match addressing {
+                    Addressing::Immediate => operand as u8,
+                    _ => self.read(operand, ReadSize::Byte) as u8,
+                };
+
+                let (reg, overflow) = Self::checked_add(self.regs.a, data, self.regs.p.carry);
+                self.regs.a = reg;
+                self.regs.p.overflow = overflow;
+
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
             }
             Instruction::SBC => {
-                let carry = if self.regs.p.carry { 0 } else { 1 };
-                match addressing {
-                    Addressing::Immediate => {
-                        let result = self.regs.a.checked_sub(operand as u8 + carry);
-                        self.regs.p.overflow = self.check_overflow(&result);
-                    }
-                    _ => {
-                        let data = self.read(operand, ReadSize::Byte) as u8;
-                        let result = self.regs.a.checked_sub(data as u8 + carry);
-                        self.regs.p.overflow = self.check_overflow(&result);
-                    }
-                }
+                let data = match addressing {
+                    Addressing::Immediate => operand as u8,
+                    _ => self.read(operand, ReadSize::Byte) as u8,
+                };
+
+                let (reg, overflow) = Self::checked_sub(self.regs.a, data, self.regs.p.carry);
+                self.regs.a = reg;
+                self.regs.p.overflow = overflow;
+
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
             }
@@ -619,7 +622,7 @@ impl Cpu {
             }
             Instruction::INC => {
                 let data = self.read(operand, ReadSize::Byte);
-                let result = (data as u16 + 1) as u8;
+                let result = (data as i16 + 1) as u8;
                 self.bus.write_by_cpu(operand, result);
                 self.regs.p.zero = result == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
@@ -635,7 +638,7 @@ impl Cpu {
             }
             Instruction::INX => {
                 print!("INX null\n : x:{:x}+1 ->", self.regs.x);
-                self.regs.x = (self.regs.x as u16 + 1) as u8;
+                self.regs.x = (self.regs.x as i16 + 1) as u8;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
                 print!(" x:{:x}", self.regs.x);
@@ -649,7 +652,7 @@ impl Cpu {
             }
             Instruction::INY => {
                 print!("INY null\n : y:{:x}+1 ->", self.regs.y);
-                self.regs.y = (self.regs.y as u16 + 1) as u8;
+                self.regs.y = (self.regs.y as i16 + 1) as u8;
                 self.regs.p.zero = self.regs.y == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.y);
                 print!(" y:{:x}", self.regs.y);
