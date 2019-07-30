@@ -128,7 +128,7 @@ impl Vram {
             mem: vec![0; Self::VRAM_SIZE],
             chr_rom,
             chr_ram: if chr_len == 0 {
-                vec![0; 0x1FFF]
+                vec![0; 0x2000]
             } else {
                 Vec::new()
             },
