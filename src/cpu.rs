@@ -851,7 +851,7 @@ impl Cpu {
                  inst: &Instruction,
                  addr: &Addressing
                  ) {
-        print!("0x{:x}: {:x} ", pc, opcode);
+        print!("0x{:x}: {:>02x} ", pc, opcode);
         match addr{
             Addressing::Accumlator => {
                 println!("      | {:?}", inst);
