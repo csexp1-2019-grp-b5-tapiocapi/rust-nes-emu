@@ -67,6 +67,7 @@ const CYCLE: [u8; 256] = [
      /*0xF0*/ 2, 5, 2, 8, 4, 4, 6, 6, 2, 4, 2, 7, 4, 4, 7, 7,
 ];
 
+#[derive(Debug)]
 enum Instruction {
     // A: Accumlator M: fetched memory data C: The flag to set by an instruction.
     ADC, // Add M to A with C: A += M + C
@@ -130,6 +131,7 @@ enum Instruction {
     Unknown,
 }
 
+#[derive(Debug)]
 enum Addressing {
     Accumlator,
     Immediate,
@@ -240,7 +242,7 @@ impl Cpu {
     // fetch opcode (8-bit)
     fn fetch(&mut self) -> u16 {
         let data = self.read(self.regs.pc, ReadSize::Byte);
-        println!("fetch 0x{:x} : {:x}", self.regs.pc, data);
+        //println!("fetch 0x{:x} : {:x}", self.regs.pc, data);
         self.regs.pc += if self.regs.pc < 0xFFFF { 1 } else { 0 };
         data
     }
@@ -348,55 +350,55 @@ impl Cpu {
                 self.regs.p.zero = self.regs.a == 0;
             }
             Instruction::AND => {
-                print!("AND ");
+                //print!("AND ");
                 match addressing {
                     Addressing::Immediate => {
                         self.regs.a &= operand as u8;
-                        print!("#{:x}", operand as u8);
+                        //print!("#{:x}", operand as u8);
                     }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         self.regs.a &= data;
-                        print!("#{:x}", data);
+                        //print!("#{:x}", data);
                     }
                 }
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
             }
             Instruction::ORA => {
-                print!("ORA ");
+                //print!("ORA ");
                 match addressing {
                     Addressing::Immediate => {
                         self.regs.a |= operand as u8;
-                        print!("#{:x}", operand);
+                        //print!("#{:x}", operand);
                     }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         self.regs.a |= data;
-                        print!("#{:x}", data);
+                        //print!("#{:x}", data);
                     }
                 }
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
             }
             Instruction::EOR => {
-                print!("EOR ");
+                //print!("EOR ");
                 match addressing {
                     Addressing::Immediate => {
                         self.regs.a ^= operand as u8;
-                        print!("#{:x}", operand);
+                        //print!("#{:x}", operand);
                     }
                     _ => {
                         let data = self.read(operand, ReadSize::Byte) as u8;
                         self.regs.a ^= data;
-                        print!("#{:x}", data);
+                        //print!("#{:x}", data);
                     }
                 }
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
             }
             Instruction::ASL => {
-                print!("ASL ");
+                //print!("ASL ");
                 match addressing {
                     Addressing::Accumlator => {
                         self.regs.p.carry = ((self.regs.a & (1 << 7)) >> 7) != 0;
@@ -411,7 +413,7 @@ impl Cpu {
                 self.regs.p.negative = self.check_negative(&self.regs.a);
             }
             Instruction::LSR => {
-                print!("LSR ");
+                //print!("LSR ");
                 match addressing {
                     Addressing::Accumlator => {
                         self.regs.p.carry = (self.regs.a & 1) != 0;
@@ -426,7 +428,7 @@ impl Cpu {
                 self.regs.p.negative = self.check_negative(&self.regs.a);
             }
             Instruction::ROL => {
-                print!("ROL");
+                //print!("ROL");
                 match addressing {
                     Addressing::Accumlator => {
                         self.regs.p.carry = ((self.regs.a & (1 << 7)) >> 7) != 0;
@@ -441,7 +443,7 @@ impl Cpu {
                 self.regs.p.negative = self.check_negative(&self.regs.a);
             }
             Instruction::ROR => {
-                print!("ROR ");
+                //print!("ROR ");
                 match addressing {
                     Addressing::Accumlator => {
                         self.regs.p.carry = (self.regs.a & 1) != 0;
@@ -456,72 +458,72 @@ impl Cpu {
                 self.regs.p.negative = self.check_negative(&self.regs.a);
             }
             Instruction::BCC => {
-                print!("BCC ");
+                //print!("BCC ");
                 self.regs.pc = if !self.regs.p.carry {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
                 };
             }
             Instruction::BCS => {
-                print!("BCS ");
+                //print!("BCS ");
                 self.regs.pc = if self.regs.p.carry {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
                 };
             }
             Instruction::BEQ => {
-                print!("BEQ ");
+                //print!("BEQ ");
                 self.regs.pc = if self.regs.p.zero {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
                 };
             }
             Instruction::BNE => {
-                println!("BNE ${:x} ", operand);
+                //println!("BNE ${:x} ", operand);
                 self.regs.pc = if !self.regs.p.zero {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
                 };
             }
             Instruction::BVC => {
-                print!("BVC ");
+                //print!("BVC ");
                 self.regs.pc = if !self.regs.p.overflow {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
                 };
             }
             Instruction::BVS => {
-                print!("BVS ");
+                //print!("BVS ");
                 self.regs.pc = if self.regs.p.overflow {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
                 };
             }
             Instruction::BPL => {
-                print!("BPL ");
+                //print!("BPL ");
                 self.regs.pc = if !self.regs.p.negative {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
                 };
             }
             Instruction::BMI => {
-                print!("BMI ");
+                //print!("BMI ");
                 self.regs.pc = if self.regs.p.negative {
-                    print!("{:x} -> pc:{:x}", operand, self.regs.pc);
+                    //print!("{:x} -> pc:{:x}", operand, self.regs.pc);
                     operand
                 } else {
                     self.regs.pc
@@ -533,40 +535,40 @@ impl Cpu {
                 self.regs.p.zero = result == 0;
                 self.regs.p.negative = target & (1 << 7) == 0b1000_0000;
                 self.regs.p.overflow = target & (1 << 6) == 0b0100_0000;
-                print!("BIT ");
+                //print!("BIT ");
             }
             Instruction::JMP => {
                 self.regs.pc = operand;
-                print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
+                //print!("JMP {:x} -> pc:{:x}", operand, self.regs.pc);
             }
             Instruction::JSR => {
                 self.push(((self.regs.pc & 0xFF00) >> 8) as u8);
                 self.push((self.regs.pc & 0xFF) as u8);
-                println!("<<<<<<<<<<<<<<<<<<<");
+                //println!("<<<<<<<<<<<<<<<<<<<");
                 let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
-                    println!("sp:{:x} val:{:x}", i, data);
+                    //println!("sp:{:x} val:{:x}", i, data);
                 }
-                println!("<<<<<<<<<<<<<<<<<<<");
+                //println!("<<<<<<<<<<<<<<<<<<<");
                 self.regs.pc = operand;
-                print!("JSR");
+                //print!("JSR");
             }
             Instruction::RTS => {
-                println!("<<<<<<<<<<<<<<<<<<<");
+                //println!("<<<<<<<<<<<<<<<<<<<");
                 let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
-                    println!("sp:{:x} val:{:x}", i, data);
+                    //println!("sp:{:x} val:{:x}", i, data);
                 }
                 let lower = self.pop() as u16;
                 let upper = self.pop() as u16;
                 self.regs.pc = (upper << 8) | lower;
-                println!("<<<<<<<<<<<<<<<<<<<");
-                print!("RTS -> {:x}", self.regs.pc);
+                //println!("<<<<<<<<<<<<<<<<<<<");
+                //print!("RTS -> {:x}", self.regs.pc);
             }
             Instruction::BRK => {
-                print!("BRK");
+                //print!("BRK");
                 let interrupt = self.regs.p.interrupt;
                 //self.regs.pc += 1;
                 //let lower = (self.regs.pc >> 8) as u8;
@@ -588,7 +590,7 @@ impl Cpu {
                 let lower = self.pop() as u16;
                 let upper = self.pop() as u16;
                 self.regs.pc = ((upper) << 8) | lower;
-                print!("RTI");
+                //print!("RTI");
             }
             Instruction::CMP => {
                 let m = match addressing {
@@ -598,7 +600,7 @@ impl Cpu {
                 self.regs.p.carry = self.regs.a >= m;
                 self.regs.p.zero = self.regs.a == m;
                 self.regs.p.negative = (self.regs.a as i8) > (m as i8);
-                print!("CMP");
+                //print!("CMP");
             }
             Instruction::CPX => {
                 let m = match addressing {
@@ -608,7 +610,7 @@ impl Cpu {
                 self.regs.p.carry = self.regs.x >= m;
                 self.regs.p.zero = self.regs.x == m;
                 self.regs.p.negative = self.regs.x > m;
-                print!("CPX");
+                //print!("CPX");
             }
             Instruction::CPY => {
                 let m = match addressing {
@@ -618,7 +620,7 @@ impl Cpu {
                 self.regs.p.carry = self.regs.y >= m;
                 self.regs.p.zero = self.regs.y == m;
                 self.regs.p.negative = self.regs.y > m;
-                print!("CPY");
+                //print!("CPY");
             }
             Instruction::INC => {
                 let data = self.read(operand, ReadSize::Byte);
@@ -626,10 +628,10 @@ impl Cpu {
                 self.bus.write_by_cpu(operand, result);
                 self.regs.p.zero = result == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
-                print!("INC");
+                //print!("INC");
             }
             Instruction::DEC => {
-                print!("DEC");
+                //print!("DEC");
                 let data = self.read(operand, ReadSize::Byte) as u8;
                 let result = (data as i16 - 1) as u8;
                 self.bus.write_by_cpu(operand, result);
@@ -637,191 +639,191 @@ impl Cpu {
                 self.regs.p.negative = self.check_negative(&result);
             }
             Instruction::INX => {
-                print!("INX null\n : x:{:x}+1 ->", self.regs.x);
+                //print!("INX null\n : x:{:x}+1 ->", self.regs.x);
                 self.regs.x = (self.regs.x as i16 + 1) as u8;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
-                print!(" x:{:x}", self.regs.x);
+                //print!(" x:{:x}", self.regs.x);
             }
             Instruction::DEX => {
-                print!("DEX null\n : x:{:x}-1 ->", self.regs.x);
+                //print!("DEX null\n : x:{:x}-1 ->", self.regs.x);
                 self.regs.x = (self.regs.x as i16 - 1) as u8;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
-                print!(" x:{:x}", self.regs.x);
+                //print!(" x:{:x}", self.regs.x);
             }
             Instruction::INY => {
-                print!("INY null\n : y:{:x}+1 ->", self.regs.y);
+                //print!("INY null\n : y:{:x}+1 ->", self.regs.y);
                 self.regs.y = (self.regs.y as i16 + 1) as u8;
                 self.regs.p.zero = self.regs.y == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.y);
-                print!(" y:{:x}", self.regs.y);
+                //print!(" y:{:x}", self.regs.y);
             }
             Instruction::DEY => {
-                print!("DEY null\n : y:{:x}-1 ->", self.regs.y);
+                //print!("DEY null\n : y:{:x}-1 ->", self.regs.y);
                 self.regs.y = (self.regs.y as i16 - 1) as u8;
                 self.regs.p.zero = self.regs.y == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.y);
             }
             Instruction::CLC => {
                 self.regs.p.carry = false;
-                print!("CLC");
+                //print!("CLC");
             }
             Instruction::SEC => {
                 self.regs.p.carry = true;
-                print!("SEC");
+                //print!("SEC");
             }
             Instruction::CLI => {
                 self.regs.p.interrupt = false;
-                print!("CLI false -> p.interrupt");
+                //print!("CLI false -> p.interrupt");
             }
             Instruction::SEI => {
                 self.regs.p.interrupt = true;
-                println!("SEI null");
-                print!(" :true -> p.interrupt");
+                //println!("SEI null");
+                //print!(" :true -> p.interrupt");
             }
             Instruction::CLD => {
                 self.regs.p.decimal = false;
-                print!("CLD false -> p.decimal");
+                //print!("CLD false -> p.decimal");
             }
             Instruction::SED => {
                 self.regs.p.decimal = true;
-                print!("SED true -> p.decimal");
+                //print!("SED true -> p.decimal");
             }
             Instruction::CLV => {
                 self.regs.p.overflow = false;
-                print!("CLV false -> p.overflow");
+                //print!("CLV false -> p.overflow");
             }
             Instruction::LDA => {
-                print!("LDA ");
+                //print!("LDA ");
                 self.regs.a = match addressing {
                     Addressing::Immediate => {
-                        println!("#{:x}", operand);
+                        //println!("#{:x}", operand);
                         operand as u8
                     }
                     _ => {
-                        println!("${:x}", operand);
+                        //println!("${:x}", operand);
                         self.read(operand, ReadSize::Byte) as u8
                     }
                 };
                 self.regs.p.zero = self.regs.a == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.a);
-                print!(" :{:x} -> A:{:x}", operand, self.regs.a);
+                //print!(" :{:x} -> A:{:x}", operand, self.regs.a);
             }
             Instruction::LDX => {
-                print!("LDX ");
+                //print!("LDX ");
                 self.regs.x = match addressing {
                     Addressing::Immediate => {
-                        println!("#{}", operand);
+                        //println!("#{}", operand);
                         operand as u8
                     }
                     _ => {
-                        println!("${}", operand);
+                        //println!("${}", operand);
                         self.read(operand, ReadSize::Byte) as u8
                     }
                 };
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
-                print!(" : {:x} -> X", self.regs.x);
+                //print!(" : {:x} -> X", self.regs.x);
             }
             Instruction::LDY => {
-                print!("LDY ");
+                //print!("LDY ");
                 self.regs.y = match addressing {
                     Addressing::Immediate => {
-                        println!("#{}", operand);
+                        //println!("#{}", operand);
                         operand as u8
                     }
                     _ => {
-                        println!("${}", operand);
+                        //println!("${}", operand);
                         self.read(operand, ReadSize::Byte) as u8
                     }
                 };
                 self.regs.p.zero = self.regs.y == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.y);
-                print!(" : {} -> Y", self.regs.y);
+                //print!(" : {} -> Y", self.regs.y);
             }
             Instruction::STA => {
                 self.bus.write_by_cpu(operand, self.regs.a as u8);
-                print!("STA ${:x}\n a:{:x} -> {:x}", operand, self.regs.a, operand);
+                //print!("STA ${:x}\n a:{:x} -> {:x}", operand, self.regs.a, operand);
             }
             Instruction::STX => {
                 self.bus.write_by_cpu(operand, self.regs.x as u8);
-                print!("STX x:{:x} -> {:x}", self.regs.x, operand);
+                //print!("STX x:{:x} -> {:x}", self.regs.x, operand);
             }
             Instruction::STY => {
                 self.bus.write_by_cpu(operand, self.regs.y as u8);
-                print!("STY y:{:x} -> {:x}", self.regs.y, operand);
+                //print!("STY y:{:x} -> {:x}", self.regs.y, operand);
             }
             Instruction::TAX => {
                 self.regs.x = self.regs.a;
                 self.regs.p.zero = self.regs.x == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
-                print!("TAX null: A:{:x} -> X", self.regs.a);
+                //print!("TAX null: A:{:x} -> X", self.regs.a);
             }
             Instruction::TXA => {
                 self.regs.a = self.regs.x;
                 self.regs.p.zero = self.regs.a == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.a);
-                print!("TXA");
+                //print!("TXA");
             }
             Instruction::TAY => {
                 self.regs.y = self.regs.a;
                 self.regs.p.zero = self.regs.y == 0;
-                print!("TAY");
+                //print!("TAY");
             }
             Instruction::TYA => {
                 self.regs.a = self.regs.y;
                 self.regs.p.zero = self.regs.a == 0;
                 self.regs.p.negative = self.check_negative(&self.regs.a);
-                print!("TYA");
+                //print!("TYA");
             }
             Instruction::TSX => {
                 self.regs.x = (self.regs.sp & 0xFF) as u8;
                 self.regs.p.negative = self.check_negative(&self.regs.x);
                 self.regs.p.zero = self.regs.x == 0;
-                print!("TSX: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
+                //print!("TSX: S(SP){:x} -> X:{:x}", self.regs.sp, self.regs.x);
             }
             Instruction::TXS => {
                 self.regs.sp = (self.regs.x as u16) | 0x0100;
-                print!(
-                    "TXS null\n : X:{:x} -> S(SP):{:x}",
-                    self.regs.x, self.regs.sp
-                );
+                //print!(
+                //    "TXS null\n : X:{:x} -> S(SP):{:x}",
+                //    self.regs.x, self.regs.sp
+                //);
             }
             Instruction::PHA => {
                 self.push(self.regs.a);
-                println!("<<<<<<<<<<<<<<<<<<<");
+                //println!("<<<<<<<<<<<<<<<<<<<");
                 let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
-                    println!("sp:{:x} val:{:x}", i, data);
+                    //println!("sp:{:x} val:{:x}", i, data);
                 }
-                println!("<<<<<<<<<<<<<<<<<<<");
-                print!("PHA a:{:x} -> stack:{:x}", self.regs.a, self.regs.sp);
+                //println!("<<<<<<<<<<<<<<<<<<<");
+                //print!("PHA a:{:x} -> stack:{:x}", self.regs.a, self.regs.sp);
             }
             Instruction::PLA => {
                 self.regs.a = self.pop();
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
-                println!("<<<<<<<<<<<<<<<<<<<");
+                //println!("<<<<<<<<<<<<<<<<<<<");
                 let sp = 1 + self.regs.sp;
                 for i in sp..0x0200 {
                     let data = self.read(i, ReadSize::Byte);
-                    println!("sp:{:x} val:{:x}", i, data);
+                    //println!("sp:{:x} val:{:x}", i, data);
                 }
-                println!("<<<<<<<<<<<<<<<<<<<");
-                print!("PLA stack:{:x} -> A:{:x}", self.regs.sp, self.regs.a);
+                //println!("<<<<<<<<<<<<<<<<<<<");
+                //print!("PLA stack:{:x} -> A:{:x}", self.regs.sp, self.regs.a);
             }
             Instruction::PHP => {
                 self.push_status();
-                print!("PHP");
+                //print!("PHP");
             }
             Instruction::PLP => {
                 self.pop_status();
-                print!("PLP");
+                //print!("PLP");
             }
             Instruction::NOP => {
-                print!("NOP");
+                //print!("NOP");
             }
             _ => {}
         }
@@ -834,20 +836,107 @@ impl Cpu {
             self.nmi_handler();
             *cpu_bus::NMI_INT.borrow_mut() = false;
         }
-
+        let pc_for_log = self.regs.pc;
         let opcode = self.fetch();
-        //if self.regs.pc < 0x8080 {
         let op_info = self.get_instruction_info(opcode);
-        //println!(
-        //    "{:x} {:x} {}",
-        //    opcode,
-        //    op_info.2,
-        //    if op_info.2 == 0 { "unknown" } else { "" }
-        //);
         let operand = self.fetch_operand(&op_info.1);
         self.exec(&op_info.0, &op_info.1, operand);
-        println!(" opcode {:x} operand {:x}", opcode, operand);
-        //}
+        &self.print_log(pc_for_log, opcode, operand, &op_info.0, &op_info.1);
+    }
+
+    fn print_log(&mut self, 
+                 pc: u16,
+                 opcode: u16,
+                 operand: u16,
+                 inst: &Instruction,
+                 addr: &Addressing
+                 ) {
+        print!("0x{:x}: {:x} ", pc, opcode);
+        match addr{
+            Addressing::Accumlator => {
+                println!("      | {:?}", inst);
+            },
+            Addressing::Immediate  => {
+                println!("{:>02x} {:>02x} | {:?} #${:?}", 
+                         &self.read(pc + 1, ReadSize::Byte),
+                         &self.read(pc + 2, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::Absolute   => {
+                println!("{:>02x} {:>02x} | {:?} ${:x}",
+                         &self.read(pc + 1, ReadSize::Byte),
+                         &self.read(pc + 2, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::AbsoluteX  => {
+                println!("{:>02x} {:>02x} | {:?} ${:x}, X", 
+                         &self.read(pc + 1, ReadSize::Byte),
+                         &self.read(pc + 2, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::AbsoluteY  => {
+                println!("{:>02x} {:>02x} | {:?} ${:x}, X", 
+                         &self.read(pc + 1, ReadSize::Byte),
+                         &self.read(pc + 2, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::ZeroPage   => {
+                println!("{:>02x}    | {:?} ${:x}", 
+                         &self.read(pc + 1, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::ZeroPageX  => {
+                println!("{:>02x}    | {:?} ${:x}, X",
+                         &self.read(pc + 1, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::ZeroPageY  => {
+                println!("{:>02x}    | {:?} ${:x}, X",
+                         &self.read(pc + 1, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::Implied    => {
+                println!("      | {:?}", inst);
+            },
+            Addressing::Relative   => {
+                println!("{:>02x}    | {:?} ${:x}",
+                         &self.read(pc + 1, ReadSize::Byte),
+                         inst, 
+                         operand);
+            },
+            Addressing::Indirect   => {
+                println!("{:>02x} {:>02x} | {:?} (${:x})", 
+                         &self.read(pc + 1, ReadSize::Byte),
+                         &self.read(pc + 2, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::IndirectX  => {
+                println!("{:>02x} {:>02x} | {:?} (${:x}, X)", 
+                         &self.read(pc + 1, ReadSize::Byte),
+                         &self.read(pc + 2, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::IndirectY  => {
+                println!("{:>02x} {:>02x} | {:?} (${:x}), Y", 
+                         &self.read(pc + 1, ReadSize::Byte),
+                         &self.read(pc + 2, ReadSize::Byte),
+                         inst,
+                         operand);
+            },
+            Addressing::Unknown    => {
+                println!("Unknown");
+            }
+        }
+        //println!("0x{:x}: {:x} {:x} {:?} 
     }
 
     fn get_instruction_info(&self, opcode: u16) -> (Instruction, Addressing, u8) {
