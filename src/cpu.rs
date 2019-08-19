@@ -128,7 +128,6 @@ enum Instruction {
     NOP, // No operation
     //NOPI,
     //NOPD,
-    Unknown,
 }
 
 #[derive(Debug)]
@@ -146,7 +145,6 @@ enum Addressing {
     IndirectX,
     IndirectY,
     Indirect,
-    Unknown,
 }
 
 enum ReadSize {
@@ -289,10 +287,6 @@ impl Cpu {
                 let lower_byte = self.read(addr, ReadSize::Byte);
                 let upper_byte = self.read(addr + 1, ReadSize::Byte);
                 (upper_byte << 8) | lower_byte + self.regs.y as u16
-            }
-            Addressing::Unknown => {
-                println!("Unknown Addressing mode");
-                0
             }
         }
     }
@@ -825,7 +819,6 @@ impl Cpu {
             Instruction::NOP => {
                 //print!("NOP");
             }
-            _ => {}
         }
     }
 
@@ -854,89 +847,88 @@ impl Cpu {
         print!("0x{:x}: {:>02x} ", pc, opcode);
         match addr{
             Addressing::Accumlator => {
-                println!("      | {:?}", inst);
+                print!("      | {:?}", inst);
             },
             Addressing::Immediate  => {
-                println!("{:>02x} {:>02x} | {:?} #${:?}", 
+                print!("{:>02x}    | {:?} #${:?}    ", 
                          &self.read(pc + 1, ReadSize::Byte),
-                         &self.read(pc + 2, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::Absolute   => {
-                println!("{:>02x} {:>02x} | {:?} ${:x}",
+                print!("{:>02x} {:>02x} | {:?} ${:x}",
                          &self.read(pc + 1, ReadSize::Byte),
                          &self.read(pc + 2, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::AbsoluteX  => {
-                println!("{:>02x} {:>02x} | {:?} ${:x}, X", 
+                print!("{:>02x} {:>02x} | {:?} ${:x}, X", 
                          &self.read(pc + 1, ReadSize::Byte),
                          &self.read(pc + 2, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::AbsoluteY  => {
-                println!("{:>02x} {:>02x} | {:?} ${:x}, X", 
+                print!("{:>02x} {:>02x} | {:?} ${:x}, X  ", 
                          &self.read(pc + 1, ReadSize::Byte),
                          &self.read(pc + 2, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::ZeroPage   => {
-                println!("{:>02x}    | {:?} ${:x}", 
+                print!("{:>02x}    | {:?} ${:x}", 
                          &self.read(pc + 1, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::ZeroPageX  => {
-                println!("{:>02x}    | {:?} ${:x}, X",
+                print!("{:>02x}    | {:?} ${:x}, X",
                          &self.read(pc + 1, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::ZeroPageY  => {
-                println!("{:>02x}    | {:?} ${:x}, X",
+                print!("{:>02x}    | {:?} ${:x}, X",
                          &self.read(pc + 1, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::Implied    => {
-                println!("      | {:?}", inst);
+                print!("      | {:?}", inst);
             },
             Addressing::Relative   => {
-                println!("{:>02x}    | {:?} ${:x}",
+                print!("{:>02x}    | {:?} ${:2x}    ",
                          &self.read(pc + 1, ReadSize::Byte),
                          inst, 
-                         operand);
+                         &self.read(pc + 1, ReadSize::Byte));
             },
             Addressing::Indirect   => {
-                println!("{:>02x} {:>02x} | {:?} (${:x})", 
+                print!("{:>02x} {:>02x} | {:?} (${:x})", 
                          &self.read(pc + 1, ReadSize::Byte),
                          &self.read(pc + 2, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::IndirectX  => {
-                println!("{:>02x} {:>02x} | {:?} (${:x}, X)", 
+                print!("{:>02x}    | {:?} (${:2x}, X)", 
                          &self.read(pc + 1, ReadSize::Byte),
-                         &self.read(pc + 2, ReadSize::Byte),
                          inst,
                          operand);
             },
             Addressing::IndirectY  => {
-                println!("{:>02x} {:>02x} | {:?} (${:x}), Y", 
+                print!("{:>02x}    | {:?} (${:2x}), Y ", 
                          &self.read(pc + 1, ReadSize::Byte),
-                         &self.read(pc + 2, ReadSize::Byte),
                          inst,
                          operand);
-            },
-            Addressing::Unknown    => {
-                println!("Unknown");
             }
         }
-        //println!("0x{:x}: {:x} {:x} {:?} 
+        println!("A: {:2x} X: {:2x} Y: {:2x} SP:{:4x}", 
+                 &self.regs.a,
+                 &self.regs.x,
+                 &self.regs.y,
+                 &self.regs.sp,
+                 );
     }
 
     fn get_instruction_info(&self, opcode: u16) -> (Instruction, Addressing, u8) {
@@ -1195,7 +1187,7 @@ impl Cpu {
 
             //0x => (Instruction::, Addressing::, CYCLE[index]),
             //0x => (Instruction::, Addressing::, CYCLE[index]),
-            _ => (Instruction::Unknown, Addressing::Unknown, 0)
+            _ => panic!("{} unknown", opcode)
         }
     }
 }
