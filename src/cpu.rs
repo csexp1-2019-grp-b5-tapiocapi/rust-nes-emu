@@ -188,6 +188,7 @@ impl Cpu {
             ReadSize::Byte => bus.read_by_cpu(addr) as u16,
         }
     }
+
     fn push(&mut self, data: u8) {
         self.bus.write_by_cpu(self.regs.sp, data);
         self.regs.sp -= 1;
@@ -251,6 +252,7 @@ impl Cpu {
         //println!("fetch {:x} {:x}", upper_byte, lower_byte);
         ((upper_byte as u16) << 8) | lower_byte as u16
     }
+
     fn fetch_operand(&mut self, addressing: &Addressing) -> u16 {
         match addressing {
             Addressing::Accumlator => 0,
@@ -834,101 +836,122 @@ impl Cpu {
         let op_info = self.get_instruction_info(opcode);
         let operand = self.fetch_operand(&op_info.1);
         self.exec(&op_info.0, &op_info.1, operand);
-        &self.print_log(pc_for_log, opcode, operand, &op_info.0, &op_info.1);
+        self.print_log(pc_for_log, opcode, operand, &op_info.0, &op_info.1);
     }
 
-    fn print_log(&mut self, 
-                 pc: u16,
-                 opcode: u16,
-                 operand: u16,
-                 inst: &Instruction,
-                 addr: &Addressing
-                 ) {
+    fn print_log(
+        &mut self,
+        pc: u16,
+        opcode: u16,
+        operand: u16,
+        inst: &Instruction,
+        addr: &Addressing,
+    ) {
         print!("0x{:x}: {:>02x} ", pc, opcode);
-        match addr{
+        match addr {
             Addressing::Accumlator => {
                 print!("      | {:?}", inst);
-            },
-            Addressing::Immediate  => {
-                print!("{:>02x}    | {:?} #${:?}    ", 
-                         &self.read(pc + 1, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::Absolute   => {
-                print!("{:>02x} {:>02x} | {:?} ${:x}",
-                         &self.read(pc + 1, ReadSize::Byte),
-                         &self.read(pc + 2, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::AbsoluteX  => {
-                print!("{:>02x} {:>02x} | {:?} ${:x}, X", 
-                         &self.read(pc + 1, ReadSize::Byte),
-                         &self.read(pc + 2, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::AbsoluteY  => {
-                print!("{:>02x} {:>02x} | {:?} ${:x}, X  ", 
-                         &self.read(pc + 1, ReadSize::Byte),
-                         &self.read(pc + 2, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::ZeroPage   => {
-                print!("{:>02x}    | {:?} ${:x}", 
-                         &self.read(pc + 1, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::ZeroPageX  => {
-                print!("{:>02x}    | {:?} ${:x}, X",
-                         &self.read(pc + 1, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::ZeroPageY  => {
-                print!("{:>02x}    | {:?} ${:x}, X",
-                         &self.read(pc + 1, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::Implied    => {
+            }
+            Addressing::Immediate => {
+                print!(
+                    "{:>02x}    | {:?} #${:?}    ",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::Absolute => {
+                print!(
+                    "{:>02x} {:>02x} | {:?} ${:x}",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    &self.read(pc + 2, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::AbsoluteX => {
+                print!(
+                    "{:>02x} {:>02x} | {:?} ${:x}, X",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    &self.read(pc + 2, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::AbsoluteY => {
+                print!(
+                    "{:>02x} {:>02x} | {:?} ${:x}, X  ",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    &self.read(pc + 2, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::ZeroPage => {
+                print!(
+                    "{:>02x}    | {:?} ${:x}",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::ZeroPageX => {
+                print!(
+                    "{:>02x}    | {:?} ${:x}, X",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::ZeroPageY => {
+                print!(
+                    "{:>02x}    | {:?} ${:x}, X",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::Implied => {
                 print!("      | {:?}", inst);
-            },
-            Addressing::Relative   => {
-                print!("{:>02x}    | {:?} ${:2x}    ",
-                         &self.read(pc + 1, ReadSize::Byte),
-                         inst, 
-                         &self.read(pc + 1, ReadSize::Byte));
-            },
-            Addressing::Indirect   => {
-                print!("{:>02x} {:>02x} | {:?} (${:x})", 
-                         &self.read(pc + 1, ReadSize::Byte),
-                         &self.read(pc + 2, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::IndirectX  => {
-                print!("{:>02x}    | {:?} (${:2x}, X)", 
-                         &self.read(pc + 1, ReadSize::Byte),
-                         inst,
-                         operand);
-            },
-            Addressing::IndirectY  => {
-                print!("{:>02x}    | {:?} (${:2x}), Y ", 
-                         &self.read(pc + 1, ReadSize::Byte),
-                         inst,
-                         operand);
+            }
+            Addressing::Relative => {
+                print!(
+                    "{:>02x}    | {:?} ${:2x}    ",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    inst,
+                    &self.read(pc + 1, ReadSize::Byte)
+                );
+            }
+            Addressing::Indirect => {
+                print!(
+                    "{:>02x} {:>02x} | {:?} (${:x})",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    &self.read(pc + 2, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::IndirectX => {
+                print!(
+                    "{:>02x}    | {:?} (${:2x}, X)",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    inst,
+                    operand
+                );
+            }
+            Addressing::IndirectY => {
+                print!(
+                    "{:>02x}    | {:?} (${:2x}), Y ",
+                    &self.read(pc + 1, ReadSize::Byte),
+                    inst,
+                    operand
+                );
             }
         }
-        println!("A: {:2x} X: {:2x} Y: {:2x} SP:{:4x}", 
-                 &self.regs.a,
-                 &self.regs.x,
-                 &self.regs.y,
-                 &self.regs.sp,
-                 );
+        println!(
+            "A: {:2x} X: {:2x} Y: {:2x} SP:{:4x}",
+            &self.regs.a, &self.regs.x, &self.regs.y, &self.regs.sp,
+        );
     }
 
     fn get_instruction_info(&self, opcode: u16) -> (Instruction, Addressing, u8) {
@@ -1141,7 +1164,7 @@ impl Cpu {
             0x28 => (Instruction::PLP, Addressing::Implied, CYCLE[index]),
             //NOP
             0xEA => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
-            /* Opecodes below isn't not official */
+            /* Opecodes below are unofficial */
             // NOP
             //0x1A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),
             //0x3A => (Instruction::NOP, Addressing::Implied, CYCLE[index]),

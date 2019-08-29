@@ -120,9 +120,7 @@ struct Vram {
 }
 
 impl Vram {
-    #[allow(dead_code)]
     const ADDREE_SIZE: usize = 0x4000;
-    #[allow(dead_code)]
     const VRAM_SIZE: usize = 0x2000;
     const VRAM_START: usize = 0x2000;
 
