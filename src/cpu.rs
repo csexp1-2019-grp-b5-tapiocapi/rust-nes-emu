@@ -540,27 +540,15 @@ impl Cpu {
             Instruction::JSR => {
                 self.push(((self.regs.pc & 0xFF00) >> 8) as u8);
                 self.push((self.regs.pc & 0xFF) as u8);
-                //println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = 1 + self.regs.sp;
-                for i in sp..0x0200 {
-                    let data = self.read(i, ReadSize::Byte);
-                    //println!("sp:{:x} val:{:x}", i, data);
-                }
-                //println!("<<<<<<<<<<<<<<<<<<<");
+                //self.print_stack();
                 self.regs.pc = operand;
                 //print!("JSR");
             }
             Instruction::RTS => {
-                //println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = 1 + self.regs.sp;
-                for i in sp..0x0200 {
-                    let data = self.read(i, ReadSize::Byte);
-                    //println!("sp:{:x} val:{:x}", i, data);
-                }
+                //self.print_stack();
                 let lower = self.pop() as u16;
                 let upper = self.pop() as u16;
                 self.regs.pc = (upper << 8) | lower;
-                //println!("<<<<<<<<<<<<<<<<<<<");
                 //print!("RTS -> {:x}", self.regs.pc);
             }
             Instruction::BRK => {
@@ -788,26 +776,14 @@ impl Cpu {
             }
             Instruction::PHA => {
                 self.push(self.regs.a);
-                //println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = 1 + self.regs.sp;
-                for i in sp..0x0200 {
-                    let data = self.read(i, ReadSize::Byte);
-                    //println!("sp:{:x} val:{:x}", i, data);
-                }
-                //println!("<<<<<<<<<<<<<<<<<<<");
+                //self.print_stack();
                 //print!("PHA a:{:x} -> stack:{:x}", self.regs.a, self.regs.sp);
             }
             Instruction::PLA => {
                 self.regs.a = self.pop();
                 self.regs.p.negative = self.check_negative(&self.regs.a);
                 self.regs.p.zero = self.regs.a == 0;
-                //println!("<<<<<<<<<<<<<<<<<<<");
-                let sp = 1 + self.regs.sp;
-                for i in sp..0x0200 {
-                    let data = self.read(i, ReadSize::Byte);
-                    //println!("sp:{:x} val:{:x}", i, data);
-                }
-                //println!("<<<<<<<<<<<<<<<<<<<");
+                //self.print_stack();
                 //print!("PLA stack:{:x} -> A:{:x}", self.regs.sp, self.regs.a);
             }
             Instruction::PHP => {
@@ -1212,5 +1188,15 @@ impl Cpu {
             //0x => (Instruction::, Addressing::, CYCLE[index]),
             _ => panic!("{} unknown", opcode)
         }
+    }
+
+    fn print_stack(&mut self) {
+        println!("<<<<<<<<<<<<<<<<<<<");
+        let sp = 1 + self.regs.sp;
+        for i in sp..0x0200 {
+            let data = self.read(i, ReadSize::Byte);
+            println!("sp:{:x} val:{:x}", i, data);
+        }
+        println!("<<<<<<<<<<<<<<<<<<<");
     }
 }
