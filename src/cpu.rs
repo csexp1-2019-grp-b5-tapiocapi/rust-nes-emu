@@ -36,6 +36,7 @@ impl Default for Registers {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Status {
     pub negative: bool,
     pub overflow: bool,
@@ -1212,5 +1213,54 @@ impl Cpu {
             //0x => (Instruction::, Addressing::, CYCLE[index]),
             _ => panic!("{} unknown", opcode)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    // FIXME: more tests
+
+    use super::*;
+    use crate::*;
+    fn configure_cpu(prog: &[u8]) -> Cpu {
+        let prom_buf = {
+            let mut buf = [0; 0x8000];
+            // copy the given program to the PROM
+            buf[..prog.len()].copy_from_slice(&prog);
+
+            // set the reset vector to 0x8000 (the beginning of the PROM)
+            buf[0xFFFC - 0x8000] = 0x00;
+            buf[0xFFFD - 0x8000] = 0x80;
+
+            buf
+        };
+
+        let prom = rom::ProgramRom::new(&prom_buf);
+        let crom = rom::CharacterRom::new(&[]);
+        let wram = ram::Ram::new(0x0800);
+        let ppu = ppu::Ppu::new(crom);
+
+        let cpu_bus = cpu_bus::CpuBus::new(wram, prom, ppu);
+
+        Cpu::new(cpu_bus)
+    }
+
+    #[test]
+    fn test_status_push_pop() {
+        let prog = [0x08, 0x28]; // PHP, PLP
+
+        let mut cpu = configure_cpu(&prog);
+        cpu.reset();
+
+        cpu.regs.p.reserved = false; // change a flag...
+        let status = cpu.regs.p.clone();
+        cpu.run();
+        assert_eq!(cpu.regs.sp, 0x01FE); // sp should be incremented
+        assert_eq!(cpu.regs.p, status); // status should not change after PHP
+
+        cpu.regs.p.overflow = true; // change another flag...
+        cpu.run();
+        assert_eq!(cpu.regs.sp, 0x01FF); // sp should be decremented
+        assert_eq!(cpu.regs.p, status); // status should be the original state after PLP
     }
 }
