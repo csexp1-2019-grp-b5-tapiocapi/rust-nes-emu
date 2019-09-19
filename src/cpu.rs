@@ -857,7 +857,7 @@ impl Cpu {
             }
             Addressing::AbsoluteY => {
                 print!(
-                    "{:>02x} {:>02x} | {:?} ${:x}, X  ",
+                    "{:>02x} {:>02x} | {:?} ${:x}, Y  ",
                     &self.read(pc + 1, ReadSize::Byte),
                     &self.read(pc + 2, ReadSize::Byte),
                     inst,
@@ -1248,5 +1248,134 @@ mod tests {
         cpu.run();
         assert_eq!(cpu.regs.sp, 0x01FF); // sp should be decremented
         assert_eq!(cpu.regs.p, status); // status should be the original state after PLP
+    }
+
+    #[test]
+    fn test_adc() {
+        let prog = [0x69, 0x01, // ADC #$1 : Immediate
+                    0x69, 0x01,
+                    0x65, 0x00, // ADC $0 : Zero Page
+                    0x65, 0x00,
+                    0x75, 0x00, // ADC $0, X : Zero Page, X
+                    0x75, 0x00,
+                    0x6D, 0x00, 0x05, // ADC $0x500 : Absolute
+                    0x6D, 0x00, 0x05,
+                    0x7D, 0x00, 0x05, // ADC $0x500 : Absolute, X
+                    0x7D, 0x00, 0x05, 
+                    0x79, 0x00, 0x05, // ADC $0x500 : Absolute, Y
+                    0x79, 0x00, 0x05, 
+                    0x61, 0x00, // ADC ($0, X): Indirect, X
+                    0x61, 0x00,  
+                    0x71, 0x00, // ADC ($0), Y: Indirect, Y
+                    0x71, 0x00,  
+        ];
+
+        let mut cpu = configure_cpu(&prog);
+        cpu.reset();
+        cpu.regs.a = 0x1;
+        cpu.regs.x = 0x1;
+        cpu.regs.y = 0x1;
+
+        /**** Immediate ****/
+        cpu.run(); // ADC #$1
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
+
+        cpu.regs.p.carry = false;
+        cpu.regs.a = 0x1;
+
+        /**** Zero Page ****/
+        cpu.bus.write_by_cpu(0x0, 0x1);
+        cpu.run(); // ADC $0
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
+
+        cpu.regs.p.carry = false;
+        cpu.regs.a = 0x1;
+
+        /**** Zero Page, X ****/
+        cpu.bus.write_by_cpu(0x1, 0x1);
+        cpu.run(); // ADC $0, X
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
+
+        cpu.regs.p.carry = false;
+        cpu.regs.a = 0x1;
+
+        /**** Absolute ****/
+        cpu.bus.write_by_cpu(0x500, 0x1);
+        cpu.run(); // ADC $500
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
+
+        cpu.regs.p.carry = false;
+        cpu.regs.a = 0x1;
+        cpu.bus.write_by_cpu(0x500, 0x0);
+
+        /**** Absolute, X ****/
+        cpu.bus.write_by_cpu(0x501, 0x1);
+        cpu.run(); // ADC $500, X
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
+
+        cpu.regs.p.carry = false;
+        cpu.regs.a = 0x1;
+        cpu.bus.write_by_cpu(0x501, 0x0);
+
+        /**** Absolute, Y ****/
+        cpu.bus.write_by_cpu(0x501, 0x1);
+        cpu.run(); // ADC $500, Y
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
+
+        cpu.regs.p.carry = false;
+        cpu.regs.a = 0x1;
+        cpu.bus.write_by_cpu(0x501, 0x0);
+
+        /**** Indirect, X ****/
+        cpu.bus.write_by_cpu(0x1, 0xA);
+        cpu.bus.write_by_cpu(0x2, 0x0);
+        cpu.bus.write_by_cpu(0xA, 0x1);
+        cpu.run(); // ADC ($0, X);
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
+
+        cpu.regs.p.carry = false;
+        cpu.regs.a = 0x1;
+        cpu.bus.write_by_cpu(0x1, 0x0);
+        cpu.bus.write_by_cpu(0x2, 0x0);
+        cpu.bus.write_by_cpu(0xA, 0x0);
+
+        /**** Indirect, Y ****/
+        cpu.bus.write_by_cpu(0x0, 0x0);
+        cpu.bus.write_by_cpu(0x1, 0x5);
+        cpu.bus.write_by_cpu(0x501, 0x1);
+        cpu.run(); // ADC ($0), Y;
+        assert_eq!(cpu.regs.a, 0x2);
+
+        cpu.regs.p.carry = true; // add carry;
+        cpu.run();
+        assert_eq!(cpu.regs.a, 0x4);
     }
 }
