@@ -1430,4 +1430,23 @@ mod tests {
         assert_eq!(cpu.regs.pc, 0x800C);
         assert_eq!(cpu.bus.read_by_cpu(cpu.regs.pc), 0xEA);
     }
+
+    #[test]
+    fn test_subroutine_inst() {
+        let prog = [0x20, 0x0A, 0x80, //JSR $0x800A : Absolute
+                    0xEA,             //NOP (@0x8003)
+                    0x00, 0x00, 0x00,
+                    0x00, 0x00, 0x00,
+                    0x60,             //RTS : Implied
+        ];
+        let mut cpu = configure_cpu(&prog);
+        cpu.reset();
+        cpu.run(); //JSR $0x800A
+        assert_eq!(cpu.regs.pc, 0x800A);
+        assert_eq!(cpu.bus.read_by_cpu(cpu.regs.pc), 0x60);
+
+        cpu.run(); //RTS
+        assert_eq!(cpu.regs.pc, 0x8003);
+        assert_eq!(cpu.bus.read_by_cpu(cpu.regs.pc), 0xEA);
+    }
 }
