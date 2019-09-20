@@ -1404,4 +1404,28 @@ mod tests {
         cpu.run();
         assert_eq!(cpu.regs.a, 0x4);
     }
+
+    #[test]
+    fn test_jmp() {
+        let prog = [0x4C, 0x03, 0x80, //JMP $0x8003 : Absolute
+                    0xEA,             //NOP (@0x8003)
+                    0x6C, 0x0A, 0x80, //JMP ($0x800A : Indirect)
+                    0x00, 0x00, 0x00, //dummy
+                    0x0C,             //lower byte (@0x800A)
+                    0x80,             //upper byte (@0x800B)
+                    0xEA,             //NOP (@0x800C)
+        ];
+
+        let mut cpu = configure_cpu(&prog);
+        cpu.reset();
+
+        cpu.run(); //JMP $0x8003
+        assert_eq!(cpu.regs.pc, 0x8003);
+        assert_eq!(cpu.bus.read_by_cpu(cpu.regs.pc), 0xEA);
+
+        cpu.run(); //NOP
+        cpu.run(); //JMP (0x800A)
+        assert_eq!(cpu.regs.pc, 0x800C);
+        assert_eq!(cpu.bus.read_by_cpu(cpu.regs.pc), 0xEA);
+    }
 }
