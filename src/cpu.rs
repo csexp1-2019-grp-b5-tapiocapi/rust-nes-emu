@@ -48,6 +48,34 @@ pub struct Status {
     pub carry: bool,
 }
 
+impl From<Status> for u8 {
+    fn from(v: Status) -> u8 {
+        ((v.negative as u8) << 7)
+            | ((v.overflow as u8) << 6)
+            | ((v.reserved as u8) << 5)
+            | ((v.break_mode as u8) << 4)
+            | ((v.decimal as u8) << 3)
+            | ((v.interrupt as u8) << 2)
+            | ((v.zero as u8) << 1)
+            | ((v.carry as u8) << 0)
+    }
+}
+
+impl From<u8> for Status {
+    fn from(v: u8) -> Status {
+        Status {
+            negative: (v & (1 << 7)) != 0,
+            overflow: (v & (1 << 6)) != 0,
+            reserved: (v & (1 << 5)) != 0,
+            break_mode: (v & (1 << 4)) != 0,
+            decimal: (v & (1 << 3)) != 0,
+            interrupt: (v & (1 << 2)) != 0,
+            zero: (v & (1 << 1)) != 0,
+            carry: (v & (1 << 0)) != 0,
+        }
+    }
+}
+
 #[rustfmt::skip]
 const CYCLE: [u8; 256] = [
      /*0x00*/ 7, 6, 2, 8, 3, 3, 5, 5, 3, 2, 2, 2, 4, 4, 6, 6,
@@ -196,41 +224,11 @@ impl Cpu {
     }
 
     fn push_status(&mut self) {
-        let mut status = if self.regs.p.negative { 1 } else { 0 };
-        status <<= 1;
-        status |= if self.regs.p.overflow { 1 } else { 0 };
-        status <<= 1;
-        status |= if self.regs.p.reserved { 1 } else { 0 };
-        status <<= 1;
-        status |= if self.regs.p.break_mode { 1 } else { 0 };
-        status <<= 1;
-        status |= if self.regs.p.decimal { 1 } else { 0 };
-        status <<= 1;
-        status |= if self.regs.p.interrupt { 1 } else { 0 };
-        status <<= 1;
-        status |= if self.regs.p.zero { 1 } else { 0 };
-        status <<= 1;
-        status |= if self.regs.p.carry { 1 } else { 0 };
-        self.push(status);
+        self.push(self.regs.p.clone().into());
     }
 
     fn pop_status(&mut self) {
-        let mut status = self.pop();
-        self.regs.p.carry = (status & 0x1) == 1;
-        status >>= 1;
-        self.regs.p.zero = (status & 0x1) == 1;
-        status >>= 1;
-        self.regs.p.interrupt = (status & 0x1) == 1;
-        status >>= 1;
-        self.regs.p.decimal = (status & 0x1) == 1;
-        status >>= 1;
-        self.regs.p.break_mode = (status & 0x1) == 1;
-        status >>= 1;
-        self.regs.p.reserved = (status & 0x1) == 1;
-        status >>= 1;
-        self.regs.p.overflow = (status & 0x1) == 1;
-        status >>= 1;
-        self.regs.p.negative = (status & 0x1) == 1;
+        self.regs.p = self.pop().into();
     }
 
     fn pop(&mut self) -> u8 {
@@ -1232,22 +1230,50 @@ mod tests {
     }
 
     #[test]
+    fn test_status_type_conv() {
+        let s1 = Status {
+            negative: false,
+            overflow: true,
+            reserved: false,
+            break_mode: true,
+            decimal: false,
+            interrupt: true,
+            zero: false,
+            carry: true,
+        };
+        assert_eq!(u8::from(s1), 0b0101_0101);
+
+        let s2 = Status {
+            negative: true,
+            overflow: false,
+            reserved: true,
+            break_mode: false,
+            decimal: true,
+            interrupt: false,
+            zero: true,
+            carry: false,
+        };
+        assert_eq!(s2, Status::from(0b1010_1010));
+    }
+
+    #[test]
     fn test_status_push_pop() {
         let prog = [0x08, 0x28]; // PHP, PLP
 
         let mut cpu = configure_cpu(&prog);
         cpu.reset();
 
-        cpu.regs.p.reserved = false; // change a flag...
-        let status = cpu.regs.p.clone();
+        let status = 0b0101_0101;
+        cpu.regs.p = status.into();
         cpu.run();
         assert_eq!(cpu.regs.sp, 0x01FE); // sp should be incremented
-        assert_eq!(cpu.regs.p, status); // status should not change after PHP
+        assert_eq!(cpu.regs.p, Status::from(status)); // status should not change after PHP
+        assert_eq!(cpu.bus.read_by_cpu(cpu.regs.sp+1), status); // status should be pushed onto the stack
 
-        cpu.regs.p.overflow = true; // change another flag...
+        cpu.regs.p = 0b1111_1111.into(); // alter status
         cpu.run();
         assert_eq!(cpu.regs.sp, 0x01FF); // sp should be decremented
-        assert_eq!(cpu.regs.p, status); // status should be the original state after PLP
+        assert_eq!(cpu.regs.p, Status::from(status)); // status should be the original state after PLP
     }
 
     #[test]
