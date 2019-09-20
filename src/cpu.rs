@@ -1450,4 +1450,59 @@ mod tests {
         assert_eq!(cpu.regs.pc, 0x8003);
         assert_eq!(cpu.bus.read_by_cpu(cpu.regs.pc), 0xEA);
     }
+
+    #[test]
+    fn test_load_inst() { //LDA LDX LDY
+        let prog = [0xA9, 0x1, //LDA #$1 : Immediate
+                    0xA5, 0x0, //LDA $0 : Zero Page
+                    0xB5, 0x0, //LDA $0, X : Zero Page, X
+                    0xAD, 0x0, 0x0, //LDA $0x0000 : Absolute
+                    0xBD, 0x0, 0x0, //LDA $0x0001, X : Absolute, X
+                    0xB9, 0x0, 0x0, //LDA $0x0001, Y : Absolute, Y
+                    0xA1, 0x0, //LDA ($0x0, X) : Indirect, X
+                    0xB1, 0x0  //LDA ($0x0), Y
+        ];
+        let mut cpu = configure_cpu(&prog);
+        cpu.reset();
+
+        cpu.bus.write_by_cpu(0x0, 0x2);
+        cpu.bus.write_by_cpu(0x1, 0x3);
+        cpu.bus.write_by_cpu(0x2, 0x4);
+        cpu.bus.write_by_cpu(0x403, 0xA);
+        cpu.bus.write_by_cpu(0x304, 0xB);
+        cpu.regs.x = 0x1;
+        cpu.regs.y = 0x2;
+
+        /**** Immediate ****/
+        cpu.run(); //LDA #$1
+        assert_eq!(cpu.regs.a, 0x1);
+
+        /**** Zero Page ****/
+        cpu.run(); //LDA $0
+        assert_eq!(cpu.regs.a, 0x2);
+
+        /**** Zero Page, X ****/
+        cpu.run(); //LDA $0, X
+        assert_eq!(cpu.regs.a, 0x3);
+
+        /**** Absolute ****/
+        cpu.run(); //LDA $0000
+        assert_eq!(cpu.regs.a, 0x2);
+
+        /**** Absolute, X ****/
+        cpu.run(); //LDA $0000, X
+        assert_eq!(cpu.regs.a, 0x3);
+
+        /**** Absolute, Y ****/
+        cpu.run(); //LDA $0000, Y
+        assert_eq!(cpu.regs.a, 0x4);
+
+        /**** Indirect, X ****/
+        cpu.run(); //LDA ($0000, X)
+        assert_eq!(cpu.regs.a, 0xA);
+
+        /**** Indirect, Y ****/
+        cpu.run(); //LDA ($0000, Y)
+        assert_eq!(cpu.regs.a, 0xB);
+    }
 }
