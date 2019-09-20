@@ -752,6 +752,7 @@ impl Cpu {
             Instruction::TAY => {
                 self.regs.y = self.regs.a;
                 self.regs.p.zero = self.regs.y == 0;
+                self.regs.p.negative = self.check_negative(&self.regs.y);
                 //print!("TAY");
             }
             Instruction::TYA => {
